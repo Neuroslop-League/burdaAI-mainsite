@@ -1,7 +1,7 @@
 {
   const map = document.querySelector('.project-map');
   const stage = map.querySelector('.brain-viewport');
-  const canvas = stage.querySelector('canvas');
+  const canvas = stage.querySelector('.map-wires');
   const context = canvas.getContext('2d');
   const nodes = new Map([...stage.querySelectorAll('[data-component]')].map(node => [node.dataset.component, node]));
   const legend = new Map([...map.querySelectorAll('.brain-legend a')].map(link => [link.dataset.mapSelect, link]));

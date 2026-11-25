@@ -224,3 +224,71 @@ p, .card a { font-family: var(--pixel); font-size: 10px; line-height: 1.85; font
   line-height: 1.8;
   text-wrap: balance;
 }
+
+@media (prefers-reduced-motion: no-preference) {
+  .mark { animation: logo-turn 8s steps(1, end) infinite; }
+  .intro h1 { animation: title-reveal 620ms steps(5, end) both; }
+  .intro h1 span { animation: title-shadow 5s steps(1, end) infinite; }
+  .intro .slogan { animation: slogan-reveal 430ms 220ms steps(5, end) both; }
+  .slogan::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 8px;
+    height: 4px;
+    background: #fff8ea;
+    box-shadow: 8px 0 #ffaf55, 16px 0 #ff733e;
+    animation: slogan-signal 4s steps(12, end) infinite;
+    pointer-events: none;
+  }
+  .card.pixel-entered, .about.pixel-entered { animation: pixel-rise 420ms steps(5, end) both; }
+  .card[data-topic="training"] { animation-delay: 65ms; }
+  .card[data-topic="runtime"] { animation-delay: 130ms; }
+  .card:is(:hover, :focus-within) .cover { animation: cover-signal 300ms steps(3, end) both; }
+  :is(.cta, button, nav a, .card a):is(:hover, :focus-visible)::after {
+    content: "";
+    position: absolute;
+    bottom: 2px;
+    left: 3px;
+    width: 4px;
+    height: 4px;
+    background: var(--orange);
+    box-shadow: 5px 0 var(--violet);
+    animation: control-signal 320ms steps(5, end) both;
+    pointer-events: none;
+  }
+  :is(.cta, button):active { translate: 2px 2px; }
+}
+
+@keyframes logo-turn {
+  20%, 60% { transform: rotate(90deg); }
+  40%, 80% { transform: rotate(180deg); }
+}
+@keyframes title-reveal {
+  from { clip-path: inset(0 100% 0 0); translate: -8px 0; }
+  to { clip-path: inset(0 -6px -6px 0); translate: 0 0; }
+}
+@keyframes title-shadow {
+  35% { text-shadow: 4px 4px var(--orange); }
+  70% { text-shadow: 4px 4px var(--lime); }
+}
+@keyframes slogan-reveal {
+  from { clip-path: inset(0 100% -5px 0); }
+  to { clip-path: inset(0 -5px -5px 0); }
+}
+@keyframes slogan-signal {
+  from { left: 0; }
+  65%, to { left: calc(100% - 24px); }
+}
+@keyframes pixel-rise {
+  from { opacity: .55; translate: 0 10px; }
+  to { opacity: 1; translate: 0 0; }
+}
+@keyframes cover-signal {
+  50% { filter: saturate(1.35) brightness(1.08); }
+}
+@keyframes control-signal {
+  from { left: 3px; }
+  to { left: calc(100% - 12px); }
+}

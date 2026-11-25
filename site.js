@@ -46,7 +46,7 @@ function setLanguage(value) {
   language.lang = english ? 'ru' : 'en';
   language.setAttribute('aria-label', english ? 'Русский' : 'English');
   description.content = english
-    ? 'burda.AI is a language model by Neuroslop League for local inference and reproducible training.'
+    ? 'burdaAI is a language model by Neuroslop League for local inference and reproducible training.'
     : russianDescription;
 }
 
@@ -77,16 +77,25 @@ const palette = {
   peach: '#ffb17e', cream: '#f5f3eb', green: '#879f29',
 };
 
-function paint(id, background, blocks, colors = palette) {
+const artwork = new Map();
+
+function registerArtwork(id, background, blocks, motion) {
   const canvas = document.getElementById(id);
   const context = canvas.getContext('2d');
-  if (!context) return;
+  if (context) artwork.set(canvas, { canvas, context, background, blocks, motion, step: -1, visible: false });
+}
+
+function paintArtwork(scene, step) {
+  const { canvas, context, background, blocks, motion } = scene;
+  const light = theme.getAttribute('aria-checked') === 'false';
+  const colors = canvas.id === 'landscape' && light ? daylight : palette;
   context.fillStyle = colors[background];
   context.fillRect(0, 0, canvas.width, canvas.height);
-  for (const [color, x, y, width = 1, height = 1] of blocks) {
+  for (const [color, x, y, width = 1, height = 1] of blocks.concat(motion(step))) {
     context.fillStyle = colors[color];
     context.fillRect(x, y, width, height);
   }
+  scene.step = step;
 }
 
 const daylight = {
@@ -94,7 +103,7 @@ const daylight = {
   night: '#44315f', dusk: '#7765bb', blue: '#aa9ae9',
   violet: '#e8dbfc', purple: '#967eca', peach: '#ffd2a1', cream: '#fff8e7',
 };
-const landscape = ['landscape', 'blue', [
+registerArtwork('landscape', 'blue', [
   ['dusk', 0, 0, 48, 6], ['dusk', 0, 6, 48, 3],
   ['purple', 0, 20, 48, 5], ['violet', 0, 25, 48, 3],
   ['cream', 4, 5], ['purple', 9, 9, 2], ['violet', 15, 3], ['lime', 23, 6],
@@ -114,34 +123,50 @@ const landscape = ['landscape', 'blue', [
   ['lime', 36, 27, 5, 1], ['green', 40, 26, 8, 1],
   ['green', 25, 30, 6, 2], ['lime', 26, 32, 5, 1], ['lime', 29, 33, 9, 1],
   ['lime', 34, 34, 9, 2], ['purple', 7, 32, 2, 2], ['orange', 13, 34], ['violet', 45, 32, 3, 1],
-]];
+], step => {
+  const trail = step % 12;
+  return [
+    ['peach', 26 + trail, 11, 4], ['peach', 31 + (trail + 4) % 10, 14, 2],
+    [step % 8 < 4 ? 'cream' : 'violet', 15, 3],
+    [step % 10 < 5 ? 'lime' : 'purple', 23, 6],
+    ['green', 29 + trail, 33, 2], ['lime', 34 + trail % 7, 35, 2],
+  ];
+});
 
-function paintLandscape() {
-  paint(...landscape, theme.getAttribute('aria-checked') === 'true' ? palette : daylight);
-}
-paintLandscape();
-
-paint('model', 'violet', [
+registerArtwork('model', 'violet', [
   ['purple', 4, 4, 7, 7], ['ink', 5, 3, 7, 7], ['cream', 6, 4, 5, 5], ['blue', 7, 5, 3, 3],
   ['ink', 12, 6, 5, 1], ['ink', 16, 6, 1, 6], ['ink', 16, 11, 6, 1],
   ['purple', 21, 8, 7, 7], ['ink', 22, 7, 7, 7], ['orange', 23, 8, 5, 5], ['lime', 24, 9, 3, 3],
   ['blue', 27, 2, 4, 3], ['cream', 2, 13, 3, 2], ['purple', 33, 11, 2, 2],
-]);
+], step => {
+  const route = [[12, 6], [13, 6], [14, 6], [15, 6], [16, 6], [16, 7], [16, 8],
+    [16, 9], [16, 10], [16, 11], [17, 11], [18, 11], [19, 11], [20, 11], [21, 11]];
+  return [['lime', ...route[step % route.length]]];
+});
 
-paint('training', 'lime', [
+registerArtwork('training', 'lime', [
   ['green', 6, 4, 24, 11], ['ink', 5, 3, 24, 11], ['night', 6, 4, 22, 9],
   ['violet', 8, 10, 2, 1], ['violet', 10, 9, 3, 1], ['violet', 13, 8, 3, 1],
   ['violet', 16, 9, 3, 1], ['violet', 19, 7, 3, 1], ['violet', 22, 6, 3, 1],
   ['orange', 25, 5, 2, 2], ['blue', 32, 4, 2, 2], ['cream', 2, 11, 2, 2],
-]);
+], step => {
+  const chart = [10, 10, 9, 9, 9, 8, 8, 8, 9, 9, 9, 7, 7, 7, 6, 6, 6];
+  const column = step % chart.length;
+  return [['cream', 8 + column, chart[column]]];
+});
 
-paint('runtime', 'orange', [
+registerArtwork('runtime', 'orange', [
   ['peach', 6, 3, 24, 13], ['ink', 5, 2, 24, 13], ['blue', 6, 3, 22, 11],
   ['violet', 6, 3, 22, 2], ['ink', 8, 3], ['orange', 10, 3], ['lime', 12, 3],
   ['cream', 9, 7, 2, 1], ['cream', 11, 8, 2, 1], ['cream', 13, 9, 2, 1],
   ['cream', 11, 10, 2, 1], ['cream', 9, 11, 2, 1], ['lime', 17, 11, 6, 1],
   ['violet', 31, 10, 3, 2], ['ink', 2, 4, 2, 2],
-]);
+], step => {
+  const cursor = step % 18;
+  return cursor < 12
+    ? [['blue', 17, 11, 6], ['lime', 17, 11, cursor % 6 + 1], ['cream', 18 + cursor % 6, 11]]
+    : [];
+});
 
 const surfaces = {
   field: ['#644bd0', '#bd8dec', '#69cdbc', '#ee824b'],
@@ -164,6 +189,25 @@ let frame = 0;
 let lastPaint = 0;
 let surfaceTime = 0;
 let hover;
+
+const enterView = new IntersectionObserver((entries, observer) => {
+  for (const { target, isIntersecting } of entries) {
+    const scene = artwork.get(target);
+    if (scene) {
+      scene.visible = isIntersecting;
+      if (isIntersecting) paintArtwork(scene, playing ? Math.floor(surfaceTime / 135) : 0);
+    } else if (isIntersecting) {
+      target.classList.add('pixel-entered');
+      observer.unobserve(target);
+    }
+  }
+}, { threshold: 0.12 });
+
+for (const scene of artwork.values()) {
+  paintArtwork(scene, 0);
+  enterView.observe(scene.canvas);
+}
+for (const element of document.querySelectorAll('.card, .about')) enterView.observe(element);
 
 function drawTexture(state) {
   const { canvas, context, category, cells, columns, size, strength, element } = state;
@@ -269,6 +313,10 @@ function animate(now) {
     surfaceTime += lastPaint ? Math.min(now - lastPaint, 160) : 0;
     lastPaint = now;
     for (const state of textures.values()) if (state.visible) drawTexture(state);
+    const step = Math.floor(surfaceTime / 135);
+    for (const scene of artwork.values()) {
+      if (scene.visible && scene.step !== step) paintArtwork(scene, step);
+    }
   }
   frame = requestAnimationFrame(animate);
 }
@@ -281,6 +329,7 @@ function syncMotion() {
     frame = requestAnimationFrame(animate);
   } else {
     hover = null;
+    if (!playing) for (const scene of artwork.values()) paintArtwork(scene, 0);
     for (const state of textures.values()) if (state.visible) drawTexture(state);
   }
 }
@@ -289,7 +338,7 @@ reducedMotion.addEventListener('change', syncMotion);
 document.addEventListener('visibilitychange', syncMotion);
 for (const target of [theme, systemTheme]) {
   target.addEventListener(target === theme ? 'click' : 'change', () => {
-    paintLandscape();
+    for (const scene of artwork.values()) paintArtwork(scene, Math.max(0, scene.step));
     for (const state of textures.values()) if (state.visible) drawTexture(state);
   });
 }

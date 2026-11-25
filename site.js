@@ -77,19 +77,24 @@ const palette = {
   peach: '#ffb17e', cream: '#f5f3eb', green: '#879f29',
 };
 
-function paint(id, background, blocks) {
+function paint(id, background, blocks, colors = palette) {
   const canvas = document.getElementById(id);
   const context = canvas.getContext('2d');
   if (!context) return;
-  context.fillStyle = palette[background];
+  context.fillStyle = colors[background];
   context.fillRect(0, 0, canvas.width, canvas.height);
   for (const [color, x, y, width = 1, height = 1] of blocks) {
-    context.fillStyle = palette[color];
+    context.fillStyle = colors[color];
     context.fillRect(x, y, width, height);
   }
 }
 
-paint('landscape', 'blue', [
+const daylight = {
+  ...palette,
+  night: '#44315f', dusk: '#7765bb', blue: '#aa9ae9',
+  violet: '#e8dbfc', purple: '#967eca', peach: '#ffd2a1', cream: '#fff8e7',
+};
+const landscape = ['landscape', 'blue', [
   ['dusk', 0, 0, 48, 6], ['dusk', 0, 6, 48, 3],
   ['purple', 0, 20, 48, 5], ['violet', 0, 25, 48, 3],
   ['cream', 4, 5], ['purple', 9, 9, 2], ['violet', 15, 3], ['lime', 23, 6],
@@ -109,7 +114,12 @@ paint('landscape', 'blue', [
   ['lime', 36, 27, 5, 1], ['green', 40, 26, 8, 1],
   ['green', 25, 30, 6, 2], ['lime', 26, 32, 5, 1], ['lime', 29, 33, 9, 1],
   ['lime', 34, 34, 9, 2], ['purple', 7, 32, 2, 2], ['orange', 13, 34], ['violet', 45, 32, 3, 1],
-]);
+]];
+
+function paintLandscape() {
+  paint(...landscape, theme.getAttribute('aria-checked') === 'true' ? palette : daylight);
+}
+paintLandscape();
 
 paint('model', 'violet', [
   ['purple', 4, 4, 7, 7], ['ink', 5, 3, 7, 7], ['cream', 6, 4, 5, 5], ['blue', 7, 5, 3, 3],
@@ -135,6 +145,8 @@ paint('runtime', 'orange', [
 
 const surfaces = {
   field: ['#644bd0', '#bd8dec', '#69cdbc', '#ee824b'],
+  daylight: ['#9e73dc', '#e5b5f0', '#a491e8', '#f5d3ec'],
+  slogan: ['#f3eb63', '#ffdd54', '#c6dc43', '#def989'],
   navigation: ['#65bce8', '#8c9fe8', '#70d8ce', '#b4c8f3'],
   heading: ['#b693ef', '#e8a4de', '#9abbea', '#d8baf5'],
   controls: ['#ff795e', '#ffc145', '#ee6ba7', '#ffad76'],
@@ -143,12 +155,10 @@ const surfaces = {
   runtime: ['#ffb75e', '#ee8eac', '#da985a', '#bda0ee'],
   about: ['#a8df6e', '#5cd3b5', '#f4ce65', '#83dfe3'],
 };
-const motion = document.querySelector('#motion');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const field = document.querySelector('.pixel-field');
 const targetSelector = '[data-pixel]';
 const textures = new Map();
-let motionOverride;
 let playing;
 let frame = 0;
 let lastPaint = 0;
@@ -156,17 +166,29 @@ let surfaceTime = 0;
 let hover;
 
 function drawTexture(state) {
-  const { canvas, context, colors, cells, columns, size, strength, element } = state;
+  const { canvas, context, category, cells, columns, size, strength, element } = state;
   const dark = theme.getAttribute('aria-checked') === 'true';
+  const colors = surfaces[!dark && category === 'field' ? 'daylight' : category];
+  const intensity = strength * (dark ? 1 : 0.74);
   const local = hover?.element === element ? hover : null;
   context.clearRect(0, 0, canvas.width, canvas.height);
 
   for (let index = 0; index < cells.length; index++) {
-    const { color, phase, opacity } = cells[index];
+    const { seed, offset, interval, opacity } = cells[index];
     const x = index % columns * size;
     const y = Math.floor(index / columns) * size;
-    const pulse = playing ? Math.sin(surfaceTime / 900 + phase) * 0.065 : 0;
-    context.globalAlpha = (opacity + pulse) * strength * (dark ? 0.94 : 1);
+    const progress = (surfaceTime + offset) / interval;
+    const step = Math.floor(progress);
+    const color = (seed + step) % colors.length;
+    const blend = Math.min(1, (progress - step) * 2);
+    const alpha = opacity * intensity;
+    const nextAlpha = alpha * blend;
+    if (blend < 1) {
+      context.globalAlpha = (alpha - nextAlpha) / (1 - nextAlpha);
+      context.fillStyle = colors[(color + colors.length - 1) % colors.length];
+      context.fillRect(x, y, size, size);
+    }
+    context.globalAlpha = nextAlpha;
     context.fillStyle = colors[color];
     context.fillRect(x, y, size, size);
 
@@ -191,9 +213,10 @@ function fitTexture(state) {
   const count = state.columns * Math.ceil(canvas.height / size);
   while (state.cells.length < count) {
     state.cells.push({
-      color: Math.floor(Math.random() * state.colors.length),
-      phase: Math.random() * Math.PI * 2,
-      opacity: 0.08 + Math.random() * 0.27,
+      seed: Math.floor(Math.random() * surfaces[state.category].length),
+      offset: Math.random() * 1100,
+      interval: 460 + Math.random() * 640,
+      opacity: 0.12 + Math.random() * 0.26,
     });
   }
   state.cells.length = count;
@@ -230,7 +253,7 @@ for (const element of [field, ...document.querySelectorAll(targetSelector)]) {
     element,
     canvas,
     context,
-    colors: surfaces[category],
+    category,
     cells: [],
     columns: 0,
     size: compact ? 8 : 20,
@@ -242,7 +265,7 @@ for (const element of [field, ...document.querySelectorAll(targetSelector)]) {
 }
 
 function animate(now) {
-  if (!lastPaint || now - lastPaint >= 80) {
+  if (!lastPaint || now - lastPaint >= 55) {
     surfaceTime += lastPaint ? Math.min(now - lastPaint, 160) : 0;
     lastPaint = now;
     for (const state of textures.values()) if (state.visible) drawTexture(state);
@@ -251,9 +274,7 @@ function animate(now) {
 }
 
 function syncMotion() {
-  playing = motionOverride ?? !reducedMotion.matches;
-  motion.setAttribute('aria-checked', String(playing));
-  motion.querySelector('span').textContent = playing ? 'Ⅱ' : '▶';
+  playing = !reducedMotion.matches;
   cancelAnimationFrame(frame);
   lastPaint = 0;
   if (playing && !document.hidden) {
@@ -264,14 +285,11 @@ function syncMotion() {
   }
 }
 
-motion.addEventListener('click', () => {
-  motionOverride = !playing;
-  syncMotion();
-});
 reducedMotion.addEventListener('change', syncMotion);
 document.addEventListener('visibilitychange', syncMotion);
 for (const target of [theme, systemTheme]) {
   target.addEventListener(target === theme ? 'click' : 'change', () => {
+    paintLandscape();
     for (const state of textures.values()) if (state.visible) drawTexture(state);
   });
 }
@@ -289,4 +307,3 @@ document.documentElement.addEventListener('pointerleave', () => { hover = null; 
 addEventListener('scroll', () => { hover = null; }, { passive: true });
 
 syncMotion();
-motion.hidden = false;

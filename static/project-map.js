@@ -23,9 +23,43 @@
   let height = 0;
   let activeColor;
   let idleColor;
+  let nodeBounds = new Map();
+  let brainCells = [];
+  let activation;
+  let cursor;
+
+  // Outline of the left lobe in the illustration; the right is its reflection.
+  const lobe = [[.47, .07], [.37, .09], [.27, .19], [.20, .29], [.15, .44],
+    [.145, .58], [.18, .72], [.25, .83], [.35, .91], [.46, .94], [.483, .82],
+    [.481, .51], [.478, .22]];
+  const pixelColors = { lobe: '#c38dff', scan: '#64f3dd', wave: '#ddff5a', cursor: '#ff9dc5' };
+
+  function insideLobe(x, y) {
+    let inside = false;
+    for (let i = 0, j = lobe.length - 1; i < lobe.length; j = i++) {
+      const [a, b] = lobe[i];
+      const [c, d] = lobe[j];
+      if ((b > y) !== (d > y) && x < a + (c - a) * (y - b) / (d - b)) inside = !inside;
+    }
+    return inside;
+  }
+
+  function measureBrain() {
+    const size = Math.max(5, Math.round(width / 76));
+    brainCells = [];
+    for (let y = size; y < height; y += size) {
+      for (let x = size; x < width; x += size) {
+        const left = x < width / 2;
+        if (!insideLobe(left ? x / width : 1 - x / width, y / height)) continue;
+        brainCells.push({ x, y, size, left, phase: ((x * 23 + y * 31) % 137) / 137 });
+      }
+    }
+  }
 
   function select(id, updateHistory) {
-    if (!nodes.has(id) || id === active) return;
+    if (!nodes.has(id)) return;
+    if (!reduced.matches) activation = { id, start: performance.now() };
+    if (id === active) return;
     nodes.get(active).firstElementChild.removeAttribute('aria-current');
     nodes.get(id).firstElementChild.setAttribute('aria-current', 'true');
     legend.get(active).removeAttribute('aria-current');
@@ -77,7 +111,7 @@
     canvas.width = Math.round(width * ratio);
     canvas.height = Math.round(height * ratio);
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
-    const bounds = new Map([...nodes].map(([id, node]) => {
+    nodeBounds = new Map([...nodes].map(([id, node]) => {
       const rect = node.getBoundingClientRect();
       return [id, {
         left: rect.left - box.left, right: rect.right - box.left,
@@ -87,13 +121,14 @@
       }];
     }));
     paths = edges.map((edge, index) => {
-      const points = route(bounds.get(edge.from), bounds.get(edge.to), index);
+      const points = route(nodeBounds.get(edge.from), nodeBounds.get(edge.to), index);
       const segments = points.slice(1).map((end, i) => {
         const start = points[i];
         return { start, end, length: Math.hypot(end[0] - start[0], end[1] - start[1]) };
       }).filter(segment => segment.length > 0);
       return { edge, points, segments, length: segments.reduce((sum, segment) => sum + segment.length, 0) };
     });
+    measureBrain();
     updateColors();
   }
 
@@ -126,9 +161,65 @@
     paint(0);
   }
 
+  function paintBrain(time) {
+    const origin = activation && nodeBounds.get(activation.id);
+    const progress = activation ? (time - activation.start) / 1050 : 1;
+    const waveRadius = progress * width * .68;
+    const window = width * .055;
+    const scan = (time % 4400) / 4400;
+    let color;
+    for (const { x, y, size, left, phase } of brainCells) {
+      const rhythm = Math.sin(time / 660 + phase * 4.5 + (left ? 0 : 1.8));
+      let intensity = Math.max(0, rhythm - .4) * .21;
+      let light = 'lobe';
+      const scanDistance = Math.abs(y / height - (left ? scan : 1 - scan));
+      if (scanDistance < .045) {
+        intensity += (1 - scanDistance / .045) * (.09 + phase * .18);
+        light = 'scan';
+      }
+      if (origin && progress >= 0 && progress < 1) {
+        const distance = Math.hypot(x - origin.x, y - origin.y);
+        const crest = 1 - Math.abs(distance - waveRadius) / window;
+        if (crest > 0) {
+          intensity = Math.max(intensity, crest * (1 - progress) * .57);
+          light = 'wave';
+        }
+      }
+      if (cursor) {
+        const distance = Math.hypot(x - cursor.x, y - cursor.y) / (width * .14);
+        if (distance < 1) {
+          intensity += (1 - distance) * (.12 + phase * .22);
+          if (light === 'lobe') light = 'cursor';
+        }
+      }
+      if (intensity < .02) continue;
+      if (light !== color) {
+        context.fillStyle = pixelColors[light];
+        color = light;
+      }
+      context.globalAlpha = intensity;
+      context.fillRect(x - size / 2, y - size / 2, size - 1, size - 1);
+    }
+    context.globalAlpha = 1;
+  }
+
+  function drawPacket(segments, position, size) {
+    for (const { start, end, length } of segments) {
+      if (position <= length) {
+        const progress = position / length;
+        const x = start[0] + (end[0] - start[0]) * progress;
+        const y = start[1] + (end[1] - start[1]) * progress;
+        context.fillRect(Math.round(x) - size / 2, Math.round(y) - size / 2, size, size);
+        break;
+      }
+      position -= length;
+    }
+  }
+
   function paint(time) {
     if (!context) return;
     context.clearRect(0, 0, width, height);
+    if (time) paintBrain(time);
     // Draw inactive connections first so highlighted paths remain visible at crossings.
     for (const highlighted of [false, true]) {
       paths.forEach(({ edge, points, segments, length }, index) => {
@@ -149,17 +240,13 @@
         context.restore();
         if (!highlighted || !time) return;
 
-        let position = (time * 0.095 + index * 29) % length;
-        for (const segment of segments) {
-          if (position <= segment.length) {
-            const progress = position / segment.length;
-            const px = segment.start[0] + (segment.end[0] - segment.start[0]) * progress;
-            const py = segment.start[1] + (segment.end[1] - segment.start[1]) * progress;
-            context.fillRect(Math.round(px) - 3, Math.round(py) - 3, 6, 6);
-            break;
-          }
-          position -= segment.length;
+        const position = (time * 0.12 + index * 29) % length;
+        for (const [offset, size, opacity] of [[0, 6, 1], [9, 4, .55], [18, 2, .32]]) {
+          if (position < offset) continue;
+          context.globalAlpha = opacity;
+          drawPacket(segments, position - offset, size);
         }
+        context.globalAlpha = 1;
       });
     }
   }
@@ -177,9 +264,17 @@
     if (context && visible && !reduced.matches && !document.hidden) {
       frame = requestAnimationFrame(animate);
     } else {
+      cursor = null;
       paint(0);
     }
   }
+
+  stage.addEventListener('pointermove', event => {
+    if (reduced.matches || event.pointerType === 'touch') return;
+    const box = canvas.getBoundingClientRect();
+    cursor = { x: event.clientX - box.left, y: event.clientY - box.top };
+  }, { passive: true });
+  stage.addEventListener('pointerleave', () => { cursor = null; });
 
   const observer = new IntersectionObserver(([entry]) => {
     visible = entry.isIntersecting;

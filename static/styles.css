@@ -657,44 +657,44 @@ body:has(.home-page) :is(header, footer) { background: light-dark(#f4eafb, #1d19
 
   html { scroll-behavior: smooth; }
 
-  :is(button, .cta, .action, .language, .subnav a, .pr-trunk) {
+  :is(button, .cta, .action, .language, .subnav a, .pr-trunk):not(.brain-control) {
     transition: translate 125ms steps(2, end), box-shadow 170ms steps(3, end), background-color 190ms linear, color 190ms linear;
   }
-  :is(button, .cta, .action, .language, .subnav a, .pr-trunk):not(:disabled):is(:hover, :focus-visible) {
+  :is(button, .cta, .action, .language, .subnav a, .pr-trunk):not(.brain-control):not(:disabled):is(:hover, :focus-visible) {
     translate: 0 -2px;
     box-shadow: 0 3px var(--motion-accent);
   }
-  :is(button, .home-hero-actions .cta, .cta, .action, .language, .subnav a, .pr-trunk):not(:disabled):active {
+  :is(button, .home-hero-actions .cta, .cta, .action, .language, .subnav a, .pr-trunk):not(.brain-control):not(:disabled):active {
     translate: 2px 2px;
     box-shadow: 0 0 transparent;
   }
 
-  :is(button, .cta, .action, .language, .subnav a, .pr-trunk)::before,
-  :is(button, .cta, .action, .language, .subnav a, .pr-trunk)::after {
+  :is(button, .cta, .action, .language, .subnav a, .pr-trunk):not(.brain-control)::before,
+  :is(button, .cta, .action, .language, .subnav a, .pr-trunk):not(.brain-control)::after {
     content: "";
     position: absolute;
     pointer-events: none;
     opacity: 0;
   }
-  :is(button, .cta, .action, .language, .subnav a, .pr-trunk)::before {
+  :is(button, .cta, .action, .language, .subnav a, .pr-trunk):not(.brain-control)::before {
     inset: 2px;
     background: repeating-linear-gradient(90deg, transparent 0 5px, var(--motion-accent) 5px 11px);
     clip-path: inset(0 100% 0 0);
   }
-  :is(button, .cta, .action, .language, .subnav a, .pr-trunk)::after {
+  :is(button, .cta, .action, .language, .subnav a, .pr-trunk):not(.brain-control)::after {
     inset: 2px 2px auto auto;
     width: 5px;
     height: 5px;
     background: var(--motion-accent);
     box-shadow: -6px 0 var(--orange), 0 6px var(--violet);
   }
-  :is(button, .cta, .action, .language, .subnav a, .pr-trunk):not(:disabled):is(:hover, :focus-visible)::before {
+  :is(button, .cta, .action, .language, .subnav a, .pr-trunk):not(.brain-control):not(:disabled):is(:hover, :focus-visible)::before {
     animation: button-sweep 440ms steps(8, end);
   }
-  :is(button, .cta, .action, .language, .subnav a, .pr-trunk):not(:disabled):is(:hover, :focus-visible)::after {
+  :is(button, .cta, .action, .language, .subnav a, .pr-trunk):not(.brain-control):not(:disabled):is(:hover, :focus-visible)::after {
     animation: button-corners 360ms steps(3, end) both;
   }
-  :is(button[aria-pressed="true"], a[aria-current="page"], #theme[aria-checked="true"])::after {
+  :is(button[aria-pressed="true"], a[aria-current="page"], #theme[aria-checked="true"]):not(.brain-control)::after {
     opacity: .75;
     animation: selected-signal 2.8s steps(1, end) infinite;
   }
@@ -829,31 +829,11 @@ body:has(.home-page) :is(header, footer) { background: light-dark(#f4eafb, #1d19
 .map-nodes [data-component="model"] { --zone-x: 73%; --zone-y: 58%; }
 .map-nodes [data-component="training"] { --zone-x: 46%; --zone-y: 52%; }
 .map-nodes [data-component="runtime"] { --zone-x: 52%; --zone-y: 82%; }
-.map-node {
-  display: grid;
-  justify-items: center;
-  gap: 4px;
-  min-height: 44px;
-  min-width: 0;
-  padding: 6px 8px;
-  white-space: nowrap;
-  border-color: #b2a0d9;
-  background: #191528;
-  color: #f9efe2;
-  box-shadow: 3px 3px #120e1c;
-  pointer-events: auto;
-}
 .brain-node-light {
   width: 6px;
   height: 6px;
   background: #b8a5f9;
   box-shadow: 0 0 0 2px #b8a5f944;
-}
-.map-node[aria-current="true"] {
-  background: var(--lime);
-  border-color: #332147;
-  color: #25183d;
-  box-shadow: 3px 3px var(--orange), 0 0 0 4px #d7fa3e55;
 }
 .map-node[aria-current="true"] .brain-node-light { background: #50356d; box-shadow: 0 0 0 2px #50356d44; }
 .map-node-label { font: 700 10px/1.2 monospace; }
@@ -874,15 +854,108 @@ body:has(.home-page) :is(header, footer) { background: light-dark(#f4eafb, #1d19
 .map-relations dt { font-weight: 700; font-size: 13px; margin-bottom: 5px; }
 .map-relations dd, .map-pulls { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
 .map-pulls { margin-top: 13px; }
-.map-chip {
-  padding: 4px 7px;
-  border: 1px solid var(--line);
-  background: var(--nav-paper);
-  font-size: 13px;
+.brain-control {
+  --brain-signal: light-dark(#6840a3, #b8a5f9);
+  --brain-fill: light-dark(#f4eafd, #2b2340);
+  --brain-ink: light-dark(#382554, #fff4e6);
+  --brain-arrow-x: 0;
+  --brain-arrow-y: -3px;
+  --motion-accent: var(--brain-signal);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  max-width: 100%;
+  min-height: 36px;
+  padding: 7px 9px;
+  border: 1px solid var(--brain-signal);
+  background: var(--brain-fill);
+  color: var(--brain-ink);
+  box-shadow: 2px 2px var(--brain-signal);
   text-decoration: none;
+  font: 600 13px/1.3 Arial, sans-serif;
 }
-.map-chip:is(:hover, :focus-visible) { background: var(--violet); color: #25183d; text-decoration: underline; }
-.map-back { display: inline-block; margin-top: 13px; }
+.brain-control:is(:hover, :focus-visible) {
+  border-color: var(--brain-signal);
+  background: light-dark(#e7d8fa, #3a2f51);
+  color: var(--brain-ink);
+}
+.brain-mark {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  background: var(--brain-signal);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brain-signal) 28%, transparent);
+}
+.brain-arrow {
+  display: inline-grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  flex: 0 0 18px;
+  font: 700 13px/1 monospace;
+  color: var(--brain-signal);
+}
+.brain-tab, .brain-doc { font: 9px/1.5 var(--pixel); }
+.project-map-panel .brain-tab { display: inline-flex; align-items: center; font: 9px/1.5 var(--pixel); }
+.brain-zone[data-pixel="model"], .brain-in { --brain-signal: light-dark(#6840a3, #bb9af9); }
+.brain-zone[data-pixel="training"], .brain-pr {
+  --brain-signal: light-dark(#216479, #78ddd8);
+  --brain-fill: light-dark(#e0f2ed, #20343f);
+}
+.brain-zone[data-pixel="runtime"], .brain-out {
+  --brain-signal: light-dark(#9a421c, #ff9a66);
+  --brain-fill: light-dark(#fae9da, #3b2937);
+}
+.brain-in { --brain-arrow-x: -4px; --brain-arrow-y: 0; }
+.brain-out { --brain-arrow-x: 4px; --brain-arrow-y: 0; }
+.brain-pr, .brain-doc { --brain-arrow-x: 3px; }
+.brain-pr .brain-mark {
+  width: 11px;
+  flex-basis: 11px;
+  box-shadow: none;
+  clip-path: polygon(0 0, 30% 0, 30% 35%, 65% 35%, 65% 0, 100% 0, 100% 70%, 30% 70%, 30% 100%, 0 100%);
+}
+.brain-doc {
+  min-height: 42px;
+  padding-inline: 11px;
+}
+.brain-doc, .brain-control:is([aria-current="true"], [aria-current="page"]) {
+  --brain-signal: #4f3862;
+  --brain-ink: #281b37;
+  --motion-accent: #d7fa3e;
+  border-color: #4f3862;
+  background: var(--lime);
+  color: #281b37;
+  box-shadow: 3px 3px var(--orange);
+}
+.brain-doc:is(:hover, :focus-visible), .brain-control:is([aria-current="true"], [aria-current="page"]):is(:hover, :focus-visible) {
+  border-color: #4f3862;
+  background: #e9ff86;
+  color: #281b37;
+}
+.brain-control.map-node {
+  display: grid;
+  justify-items: center;
+  min-height: 44px;
+  gap: 4px;
+  padding: 6px 8px;
+  border: 2px solid #b2a0d9;
+  background: #191528;
+  white-space: nowrap;
+  pointer-events: auto;
+  color: #f9efe2;
+  box-shadow: 3px 3px #120e1c;
+}
+.brain-control.map-node[aria-current="true"], .brain-control.map-node:is(:hover, :focus-visible) {
+  background: var(--lime);
+  color: #25183d;
+  box-shadow: 3px 3px var(--orange), 0 0 0 4px #d7fa3e55;
+}
+.brain-jump { --brain-signal: light-dark(#5c4086, #bba9f2); }
+.brain-inspect { --brain-arrow-y: 4px; display: none; }
+.map-back { margin-top: 14px; }
 .map-announcement {
   position: absolute;
   width: 1px;
@@ -904,16 +977,54 @@ body:has(.home-page) :is(header, footer) { background: light-dark(#f4eafb, #1d19
     margin: 0;
     padding: 9px 8px 5px;
   }
-  .brain-legend .map-chip { display: inline-block; }
-  .brain-legend [aria-current="true"] { background: var(--lime); color: #25183d; }
-  .brain-inspect { display: inline-block; padding: 4px 8px 9px; font-size: 13px; }
-  .map-node { min-width: 42px; min-height: 42px; padding: 4px; }
+  .brain-inspect { display: inline-flex; margin: 4px 8px 11px; }
+  .brain-control.map-node { min-width: 42px; min-height: 42px; padding: 4px; }
   .map-node-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 }
 @media (prefers-reduced-motion: no-preference) {
-  .map-node { transition-property: translate, box-shadow; }
-  .map-component:not([hidden]) { animation: panel-assemble 260ms steps(5, end) both; }
-  .map-node[aria-current="true"] .brain-node-light { animation: brain-pulse 1.9s steps(1, end) infinite; }
+  .brain-control {
+    transition: translate 140ms steps(3, end), box-shadow 180ms steps(4, end);
+  }
+  .brain-control:is(:hover, :focus-visible) {
+    translate: 0 -2px;
+    box-shadow: 3px 5px var(--motion-accent);
+  }
+  .brain-control:active { translate: 2px 2px; box-shadow: none; }
+  .brain-control::after {
+    content: "";
+    position: absolute;
+    inset: auto 2px 2px;
+    height: 2px;
+    background: repeating-linear-gradient(90deg, var(--brain-signal) 0 5px, transparent 5px 8px);
+    transform: scaleX(0);
+    transform-origin: left;
+    pointer-events: none;
+  }
+  .brain-control:is(:hover, :focus-visible)::after { animation: brain-trace 340ms steps(7, end) both; }
+  .brain-control:is(:hover, :focus-visible) .brain-arrow { animation: brain-arrow 380ms steps(5, end) both; }
+  .brain-control:is([aria-current="true"], [aria-current="page"]) :is(.brain-mark, .brain-node-light) {
+    animation: brain-pulse 1.9s steps(1, end) infinite;
+  }
+  .map-component:not([hidden]) { animation: brain-panel 320ms steps(6, end) both; }
+  .map-component:not([hidden]) :is(.brain-doc, .brain-relation, .map-pulls .brain-pr, .map-back) {
+    animation: brain-link-in 280ms 80ms steps(5, end) both;
+  }
+  .map-component:not([hidden]) .map-pulls .brain-pr:nth-child(even) { animation-delay: 150ms; }
+}
+@keyframes brain-trace {
+  to { transform: scaleX(1); }
+}
+@keyframes brain-arrow {
+  58% { translate: var(--brain-arrow-x) var(--brain-arrow-y); }
+  100% { translate: 0 0; }
+}
+@keyframes brain-panel {
+  from { opacity: .6; translate: 0 6px; }
+  to { opacity: 1; translate: 0 0; }
+}
+@keyframes brain-link-in {
+  from { opacity: .75; }
+  to { opacity: 1; }
 }
 @keyframes brain-pulse {
   55% { box-shadow: 0 0 0 4px #50356d55; }

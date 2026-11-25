@@ -337,12 +337,13 @@ function clearPointer() {
 document.documentElement.addEventListener('pointerleave', clearPointer);
 addEventListener('scroll', clearPointer, { passive: true });
 
-const burstTargets = 'button:not(:disabled), .cta, .action, .language, .subnav a, .pr-trunk';
+const burstTargets = 'button:not(:disabled), .cta, .action, .language, .subnav a, .pr-trunk, .brain-control';
 const burstDirections = [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]];
 document.addEventListener('click', event => {
-  if (!playing || event.defaultPrevented) return;
+  if (!playing) return;
   const control = event.target.closest(burstTargets);
-  if (!control) return;
+  if (!control || !control.getClientRects().length) return;
+  if (event.defaultPrevented && !control.matches('.brain-control[data-map-select]')) return;
 
   const bounds = control.getBoundingClientRect();
   const left = (event.detail === 0 ? bounds.width / 2 : event.clientX - bounds.left) - 2;

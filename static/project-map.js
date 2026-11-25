@@ -1,22 +1,20 @@
 {
   const map = document.querySelector('.project-map');
-  const stage = map.querySelector('.map-stage');
+  const stage = map.querySelector('.brain-viewport');
   const canvas = stage.querySelector('canvas');
   const context = canvas.getContext('2d');
   const nodes = new Map([...stage.querySelectorAll('[data-component]')].map(node => [node.dataset.component, node]));
+  const legend = new Map([...map.querySelectorAll('.brain-legend a')].map(link => [link.dataset.mapSelect, link]));
   const panels = [...map.querySelectorAll('.map-component')];
   const edges = [...stage.querySelectorAll('[data-map-from]')].map(element => ({
     from: element.dataset.mapFrom,
     to: element.dataset.mapTo,
-    route: element.dataset.mapRoute,
   }));
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-  const system = matchMedia('(prefers-color-scheme: dark)');
   const announcement = map.querySelector('.map-announcement');
   const language = document.querySelector('.language');
   let active = map.dataset.mapActive;
   const initial = active;
-  let narrow = false;
   let visible = false;
   let frame = 0;
   let previousPaint = 0;
@@ -30,6 +28,8 @@
     if (!nodes.has(id) || id === active) return;
     nodes.get(active).firstElementChild.removeAttribute('aria-current');
     nodes.get(id).firstElementChild.setAttribute('aria-current', 'true');
+    legend.get(active).removeAttribute('aria-current');
+    legend.get(id).setAttribute('aria-current', 'true');
     active = id;
     map.dataset.mapActive = id;
     for (const panel of panels) panel.hidden = panel.id !== `component-${id}`;
@@ -57,12 +57,8 @@
     const id = link.dataset.mapSelect;
     const fromPanel = link.closest('.map-component');
     select(id, true);
-    const heading = document.getElementById(`detail-${id}`);
-    if (narrow && event.detail > 0) {
-      heading.focus({ preventScroll: true });
-      heading.scrollIntoView({ block: 'start', behavior: reduced.matches ? 'instant' : 'smooth' });
-    } else if (fromPanel) {
-      nodes.get(id).firstElementChild.focus({ preventScroll: true });
+    if (fromPanel && fromPanel.hidden) {
+      document.getElementById(`detail-${id}`).focus({ preventScroll: true });
     }
   });
   addEventListener('popstate', () => {
@@ -73,7 +69,6 @@
 
   function measure() {
     const box = canvas.getBoundingClientRect();
-    narrow = getComputedStyle(stage).getPropertyValue('--map-layout').trim() === 'stacked';
     if (!context) return;
 
     width = box.width;
@@ -92,7 +87,7 @@
       }];
     }));
     paths = edges.map((edge, index) => {
-      const points = route(edge, bounds.get(edge.from), bounds.get(edge.to), index);
+      const points = route(bounds.get(edge.from), bounds.get(edge.to), index);
       const segments = points.slice(1).map((end, i) => {
         const start = points[i];
         return { start, end, length: Math.hypot(end[0] - start[0], end[1] - start[1]) };
@@ -102,20 +97,26 @@
     updateColors();
   }
 
-  function route(edge, from, to, index) {
-    if (narrow) {
-      if (edge.route === 'across' || (edge.route === 'down' && edge.from === 'training')) {
-        return [[from.x, from.bottom], [to.x, to.top - 4]];
-      }
-      const rail = 7 + index * 5;
-      return [[from.left, from.y], [rail, from.y], [rail, to.y], [to.left - 4, to.y]];
+  function route(from, to, index) {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const horizontal = Math.abs(dx) > Math.abs(dy) * 1.15;
+    const sx = horizontal ? (dx > 0 ? from.right : from.left) : from.x;
+    const sy = horizontal ? from.y : (dy > 0 ? from.bottom : from.top);
+    const ex = horizontal ? (dx > 0 ? to.left - 4 : to.right + 4) : to.x;
+    const ey = horizontal ? to.y : (dy > 0 ? to.top - 4 : to.bottom + 4);
+    const bend = Math.min(Math.hypot(ex - sx, ey - sy) / 5, 22) * (index % 2 ? 1 : -1);
+    const points = [[sx, sy]];
+    for (let i = 1; i < 11; i++) {
+      const t = i / 11;
+      const bow = Math.sin(Math.PI * t) * bend;
+      points.push([
+        Math.round(sx + (ex - sx) * t + (horizontal ? 0 : bow)),
+        Math.round(sy + (ey - sy) * t + (horizontal ? bow : 0)),
+      ]);
     }
-    if (edge.route === 'across') return [[from.right, from.y], [to.left - 4, to.y]];
-    if (edge.route === 'rail') return [[from.left, from.y], [12, from.y], [12, to.y], [to.left - 4, to.y]];
-    const targetX = edge.route === 'stagger-left' ? (to.left + to.x) / 2 :
-      edge.route === 'stagger-right' ? (to.x + to.right) / 2 : to.x;
-    const junctionY = (from.bottom + to.top) / 2;
-    return [[from.x, from.bottom], [from.x, junctionY], [targetX, junctionY], [targetX, to.top - 4]];
+    points.push([ex, ey]);
+    return points;
   }
 
   function updateColors() {
@@ -140,13 +141,12 @@
         context.stroke();
         const { start, end } = segments.at(-1);
         const [x, y] = end;
-        if (end[0] === start[0]) {
-          context.fillRect(x - 4, y - 5, 8, 2);
-          context.fillRect(x - 2, y - 3, 4, 3);
-        } else {
-          context.fillRect(x - 5, y - 4, 2, 8);
-          context.fillRect(x - 3, y - 2, 3, 4);
-        }
+        context.save();
+        context.translate(x, y);
+        context.rotate(Math.atan2(y - start[1], x - start[0]));
+        context.fillRect(-7, -4, 2, 8);
+        context.fillRect(-5, -2, 5, 4);
+        context.restore();
         if (!highlighted || !time) return;
 
         let position = (time * 0.095 + index * 29) % length;
@@ -189,11 +189,7 @@
   const resize = new ResizeObserver(measure);
   resize.observe(stage);
   for (const node of nodes.values()) resize.observe(node);
-  new MutationObserver(updateColors).observe(document.documentElement, {
-    attributes: true, attributeFilter: ['data-theme'],
-  });
   reduced.addEventListener('change', syncMotion);
-  system.addEventListener('change', updateColors);
   document.addEventListener('visibilitychange', syncMotion);
   measure();
 }

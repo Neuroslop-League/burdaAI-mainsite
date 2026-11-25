@@ -1,5 +1,5 @@
 <section class="site-panel project-map-panel" data-pixel="heading" aria-labelledby="page-title">
-  <h1 id="page-title">{% if en %}The project{% else %}Проект{% endif %}</h1>
+  <h1 id="page-title">{% if en %}Inside burdaAI{% else %}Мозг burdaAI{% endif %}</h1>
   <nav class="subnav" aria-label="{% if en %}Project views{% else %}Представления проекта{% endif %}">
     <a href="/project/map" aria-current="page">{% if en %}Component map{% else %}Карта компонентов{% endif %}</a>
     <a href="/project/tree">{% if en %}PR tree{% else %}Дерево PR{% endif %}</a>
@@ -8,23 +8,34 @@
 
   <div class="project-map" data-map-active="{{ active }}">
     <div class="map-stage">
-      <canvas class="map-wires" aria-hidden="true"></canvas>
-      <ul class="map-nodes" id="component-nodes" aria-label="{% if en %}Project components{% else %}Компоненты проекта{% endif %}">
+      <div class="brain-viewport">
+        <img class="brain-art" src="/static/assets/burda-brain.webp" alt="" width="1536" height="1024" fetchpriority="high">
+        <canvas class="map-wires" aria-hidden="true"></canvas>
+        <ul class="map-nodes" id="component-nodes" aria-label="{% if en %}Project components{% else %}Компоненты проекта{% endif %}">
+          {% for component in components %}
+          <li data-component="{{ component.node.id }}">
+            <a class="action map-node" data-map-select="{{ component.node.id }}" data-pixel="{{ component.tone }}" href="?node={{ component.node.id }}" aria-controls="component-{{ component.node.id }}"{% if component.node.id == active %} aria-current="true"{% endif %}>
+              <span class="brain-node-light" aria-hidden="true"></span>
+              <span class="map-node-label">{{ component.label }}</span>
+              <span class="map-node-title">{{ component.node.title }}</span>
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+        {% for edge in edges %}<span hidden data-map-from="{{ edge.from }}" data-map-to="{{ edge.to }}"></span>{% endfor %}
+      </div>
+      <ul class="brain-legend" aria-label="{% if en %}Select a component{% else %}Выбор компонента{% endif %}">
         {% for component in components %}
-        <li data-component="{{ component.node.id }}">
-          <a class="action map-node" data-map-select="{{ component.node.id }}" data-pixel="{{ component.tone }}" href="?node={{ component.node.id }}" aria-controls="component-{{ component.node.id }}"{% if component.node.id == active %} aria-current="true"{% endif %}>
-            <span class="map-node-label">{{ component.label }}</span>
-            <span class="map-node-title">{{ component.node.title }}</span>
-          </a>
-        </li>
+        <li><a class="map-chip" data-map-select="{{ component.node.id }}" href="?node={{ component.node.id }}" aria-controls="component-{{ component.node.id }}"{% if component.node.id == active %} aria-current="true"{% endif %}>{{ component.node.title }}</a></li>
         {% endfor %}
       </ul>
-      {% for edge in edges %}<span hidden data-map-from="{{ edge.from }}" data-map-to="{{ edge.to }}" data-map-route="{{ edge.route }}"></span>{% endfor %}
+      <a class="brain-inspect" href="#brain-details">{% if en %}Component details{% else %}Подробности о компоненте{% endif %} ↓</a>
     </div>
 
-    <div class="map-details">
+    <div class="map-details" id="brain-details">
       {% for component in components %}
       <section class="map-component" id="component-{{ component.node.id }}" aria-labelledby="detail-{{ component.node.id }}" {% if component.node.id != active %}hidden{% endif %}>
+        <span class="brain-detail-label">{{ component.label }}</span>
         <h2 id="detail-{{ component.node.id }}" tabindex="-1">{{ component.node.title }}</h2>
         <p>{{ component.description }}</p>
         <dl class="map-relations">

@@ -79,39 +79,32 @@ const COMPONENTS: [Definition; 5] = [
 pub struct Edge {
     pub from: &'static str,
     pub to: &'static str,
-    pub route: &'static str,
 }
 
 const EDGES: &[Edge] = &[
     Edge {
         from: "tokenizer",
         to: "data",
-        route: "across",
     },
     Edge {
         from: "tokenizer",
         to: "training",
-        route: "stagger-left",
     },
     Edge {
         from: "data",
         to: "training",
-        route: "down",
     },
     Edge {
         from: "model",
         to: "training",
-        route: "stagger-right",
     },
     Edge {
         from: "training",
         to: "runtime",
-        route: "down",
     },
     Edge {
         from: "tokenizer",
         to: "runtime",
-        route: "rail",
     },
 ];
 

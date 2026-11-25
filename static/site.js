@@ -132,8 +132,6 @@ registerArtwork('runtime', 'orange', [
 const surfaces = {
   field: ['#644bd0', '#bd8dec', '#69cdbc', '#ee824b'],
   daylight: ['#9e73dc', '#e5b5f0', '#a491e8', '#f5d3ec'],
-  project: ['#8463e2', '#b98ee1', '#55cbb9', '#f68d68'],
-  'project-light': ['#9770d1', '#d591cf', '#8379d1', '#86bdca'],
   slogan: ['#f3eb63', '#ffdd54', '#c6dc43', '#def989'],
   navigation: ['#65bce8', '#8c9fe8', '#70d8ce', '#b4c8f3'],
   heading: ['#b693ef', '#e8a4de', '#9abbea', '#d8baf5'],
@@ -147,7 +145,6 @@ const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const field = document.querySelector('.pixel-field');
 const sceneCanvas = document.querySelector('#home-effects');
 const homepage = sceneCanvas !== null;
-const projectPage = document.querySelector('.project-map-panel, .project-tree-panel') !== null;
 const targetSelector = '[data-pixel]';
 const textures = new Map();
 let playing;
@@ -180,8 +177,7 @@ for (const element of document.querySelectorAll(
 function drawTexture(state) {
   const { canvas, context, category, cells, columns, size, strength, element } = state;
   const dark = theme.getAttribute('aria-checked') === 'true';
-  const colors = !dark && category === 'field' ? surfaces.daylight :
-    !dark && category === 'project' ? surfaces['project-light'] : surfaces[category];
+  const colors = surfaces[!dark && category === 'field' ? 'daylight' : category];
   const intensity = strength * (dark ? 1 : 0.74) * (homepage ? 0.62 : 1);
   const local = hover?.element === element ? hover : null;
   context.clearRect(0, 0, canvas.width, canvas.height);
@@ -259,7 +255,7 @@ for (const element of [field, ...document.querySelectorAll(targetSelector)]) {
     canvas.setAttribute('aria-hidden', 'true');
     element.prepend(canvas);
   }
-  const key = isField ? (projectPage ? 'project' : 'field') : element.dataset.pixel;
+  const key = isField ? 'field' : element.dataset.pixel;
   const compact = element.matches('button, a, h1, h2, h3, p, .foot span');
   const category = key === 'topic' ? element.closest('[data-topic]').dataset.topic : key;
   textures.set(element, {
@@ -270,11 +266,11 @@ for (const element of [field, ...document.querySelectorAll(targetSelector)]) {
     cells: [],
     columns: 0,
     size: compact ? 8 : 20,
-    strength: isField ? 0.8 : compact ? 0.42 : element.matches('.map-details') ? 0.52 : 1,
-    visible: false,
+    strength: isField ? 0.8 : compact ? 0.42 : 1,
+    visible: isField,
   });
   resize.observe(element);
-  visibility.observe(element);
+  if (!isField) visibility.observe(element);
 }
 
 function animate(now) {

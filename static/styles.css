@@ -807,25 +807,21 @@ body:has(.home-page) :is(header, footer) { background: light-dark(#f4eafb, #1d19
   box-shadow: 4px 4px var(--violet);
 }
 .map-stage { align-self: start; min-width: 0; }
-body:has(.project-map-panel, .project-tree-panel) {
-  --field: light-dark(#d8c9ed, #171329);
-}
 .brain-viewport {
   position: relative;
   isolation: isolate;
   aspect-ratio: 3 / 2;
-  background: light-dark(#dfd1f1, #110e20);
+  background: #121020;
 }
 .brain-art, .map-wires, .map-nodes { position: absolute; inset: 0; width: 100%; height: 100%; }
 .brain-art {
   display: block;
   object-fit: fill;
-  mask-image: radial-gradient(ellipse 49% 57% at 50% 50%, #000 78%, transparent 100%);
   pointer-events: none;
 }
 .map-wires {
   color: #d7fa3e;
-  border-color: #c8b6f4b0;
+  border-color: #a0a0d8b0;
   pointer-events: none;
 }
 .map-nodes { margin: 0; padding: 0; list-style: none; pointer-events: none; }

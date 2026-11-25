@@ -1,4 +1,4 @@
-<section class="site-panel project-map-panel" data-pixel="project" aria-labelledby="page-title">
+<section class="site-panel project-map-panel" data-pixel="heading" aria-labelledby="page-title">
   <h1 id="page-title">{% if en %}Inside burdaAI{% else %}Мозг burdaAI{% endif %}</h1>
   <nav class="subnav" aria-label="{% if en %}Project views{% else %}Представления проекта{% endif %}">
     <a class="brain-control brain-tab" href="/project/map" aria-current="page"><span class="brain-mark" aria-hidden="true"></span>{% if en %}Component map{% else %}Карта компонентов{% endif %}</a>
@@ -8,7 +8,7 @@
 
   <div class="project-map" data-map-active="{{ active }}">
     <div class="map-stage">
-      <div class="brain-viewport" data-pixel="project">
+      <div class="brain-viewport">
         <img class="brain-art" src="/static/assets/burda-brain.webp" alt="" width="1536" height="1024" fetchpriority="high">
         <canvas class="map-wires" aria-hidden="true"></canvas>
         <ul class="map-nodes" id="component-nodes" tabindex="-1" aria-label="{% if en %}Project components{% else %}Компоненты проекта{% endif %}">
@@ -32,7 +32,7 @@
       <a class="brain-control brain-jump brain-inspect" href="#brain-details"><span>{% if en %}Component details{% else %}Подробности о компоненте{% endif %}</span><span class="brain-arrow" aria-hidden="true">↓</span></a>
     </div>
 
-    <div class="map-details" data-pixel="project" id="brain-details" tabindex="-1">
+    <div class="map-details" id="brain-details" tabindex="-1">
       {% for component in components %}
       <section class="map-component" id="component-{{ component.node.id }}" aria-labelledby="detail-{{ component.node.id }}" {% if component.node.id != active %}hidden{% endif %}>
         <span class="brain-detail-label">{{ component.label }}</span>

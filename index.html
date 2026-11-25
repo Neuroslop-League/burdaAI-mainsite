@@ -16,80 +16,84 @@
   <script src="site.js" defer></script>
 </head>
 <body id="top">
-  <header>
+  <canvas class="pixel-field" aria-hidden="true"></canvas>
+  <header data-pixel="navigation">
     <div class="wrap top">
-      <a class="brand" href="#top"><span class="mark" aria-hidden="true"></span> burda.AI</a>
+      <a class="brand" data-pixel="navigation" href="#top"><span class="mark" aria-hidden="true"></span> burda.AI</a>
       <nav aria-label="Навигация" data-label-en="Navigation">
-        <a href="#project" data-en="Project">Проект</a>
-        <a href="#about" data-en="About">О нас</a>
+        <a data-pixel="navigation" href="#project" data-en="Project">Проект</a>
+        <a data-pixel="navigation" href="#about" data-en="About">О нас</a>
       </nav>
       <div class="controls">
-        <button type="button" id="language" lang="en" hidden>EN</button>
-        <button type="button" id="theme" role="switch" aria-checked="false" aria-label="Тёмная тема" data-label-en="Dark theme" hidden>
+        <button type="button" data-pixel="controls" id="language" lang="en" hidden><span>EN</span></button>
+        <button type="button" data-pixel="controls" id="theme" role="switch" aria-checked="false" aria-label="Тёмная тема" data-label-en="Dark theme" hidden>
           <span aria-hidden="true">◐</span>
+        </button>
+        <button type="button" data-pixel="controls" id="motion" role="switch" aria-checked="false" aria-label="Анимация пикселей" data-label-en="Pixel animation" hidden>
+          <span aria-hidden="true">Ⅱ</span>
         </button>
       </div>
     </div>
   </header>
   <main class="wrap">
     <section class="hero" aria-labelledby="title">
-      <div class="intro">
-        <p class="league">Neuroslop League</p>
-        <h1 id="title">burda<span>.AI</span></h1>
-        <p class="slogan" data-en="burda together, burmalda forever.">Я бурда и ты бурда, получается хуйня.</p>
-        <a class="cta" href="https://github.com/Neuroslop-League/burdaAI">GitHub <span aria-hidden="true">↗</span></a>
+      <div class="intro" data-pixel="heading">
+        <p class="league" data-pixel="heading">Neuroslop League</p>
+        <h1 id="title" data-pixel="heading">burda<span>.AI</span></h1>
+        <p class="slogan" data-pixel="heading" data-en="burda together, burmalda forever.">Я бурда и ты бурда, получается хуйня.</p>
+        <a class="cta" data-pixel="controls" href="https://github.com/Neuroslop-League/burdaAI">GitHub <span aria-hidden="true">↗</span></a>
       </div>
       <div class="hero-art" aria-hidden="true"><canvas id="landscape" width="48" height="36"></canvas></div>
     </section>
 
     <section class="project" id="project" aria-labelledby="project-title">
-      <div class="section-head">
-        <h2 id="project-title" data-en="The project">О проекте</h2>
+      <div class="section-head" data-pixel="heading">
+        <h2 id="project-title" data-pixel="heading" data-en="The project">О проекте</h2>
         <div class="filters" role="group" aria-label="Разделы проекта" data-label-en="Project topics" hidden>
-          <button type="button" data-filter="all" aria-pressed="true" data-en="All">Все</button>
-          <button type="button" data-filter="model" aria-pressed="false" data-en="Model">Модель</button>
-          <button type="button" data-filter="training" aria-pressed="false" data-en="Training">Обучение</button>
-          <button type="button" data-filter="runtime" aria-pressed="false" data-en="Runtime">Запуск</button>
+          <button type="button" data-pixel="controls" data-filter="all" aria-pressed="true" data-en="All">Все</button>
+          <button type="button" data-pixel="controls" data-filter="model" aria-pressed="false" data-en="Model">Модель</button>
+          <button type="button" data-pixel="controls" data-filter="training" aria-pressed="false" data-en="Training">Обучение</button>
+          <button type="button" data-pixel="controls" data-filter="runtime" aria-pressed="false" data-en="Runtime">Запуск</button>
         </div>
       </div>
       <div class="cards">
-        <article class="card" data-topic="model">
+        <article class="card" data-topic="model" data-pixel="model">
           <canvas class="cover" id="model" width="36" height="17" aria-hidden="true"></canvas>
           <div class="card-body">
-            <h3 data-en="Architecture">Архитектура</h3>
-            <p data-en="Decoder-only Transformer with 20 layers, grouped-query attention, and a 4,096-token context window.">Decoder-only Transformer с 20 слоями, групповым вниманием GQA и контекстом 4096 токенов.</p>
-            <a href="https://github.com/Neuroslop-League/burdaAI/blob/main/docs/model-spec.md" data-en="Specification ↗">Спецификация ↗</a>
+            <h3 data-pixel="topic" data-en="Architecture">Архитектура</h3>
+            <p data-pixel="topic" data-en="Decoder-only Transformer with 20 layers, grouped-query attention, and a 4,096-token context window.">Decoder-only Transformer с 20 слоями, групповым вниманием GQA и контекстом 4096 токенов.</p>
+            <a data-pixel="controls" href="https://github.com/Neuroslop-League/burdaAI/blob/main/docs/model-spec.md" data-en="Specification ↗">Спецификация ↗</a>
           </div>
         </article>
-        <article class="card" data-topic="training">
+        <article class="card" data-topic="training" data-pixel="training">
           <canvas class="cover" id="training" width="36" height="17" aria-hidden="true"></canvas>
           <div class="card-body">
-            <h3 data-en="Training">Обучение</h3>
-            <p data-en="The project documents the data, tokenizer, and training configuration so runs can be reproduced.">Проект документирует данные, токенизатор и конфигурацию обучения, чтобы прогоны можно было повторить.</p>
-            <a href="https://github.com/Neuroslop-League/burdaAI/blob/main/docs/training.md" data-en="Training docs ↗">Документация ↗</a>
+            <h3 data-pixel="topic" data-en="Training">Обучение</h3>
+            <p data-pixel="topic" data-en="The project documents the data, tokenizer, and training configuration so runs can be reproduced.">Проект документирует данные, токенизатор и конфигурацию обучения, чтобы прогоны можно было повторить.</p>
+            <a data-pixel="controls" href="https://github.com/Neuroslop-League/burdaAI/blob/main/docs/training.md" data-en="Training docs ↗">Документация ↗</a>
           </div>
         </article>
-        <article class="card" data-topic="runtime">
+        <article class="card" data-topic="runtime" data-pixel="runtime">
           <canvas class="cover" id="runtime" width="36" height="17" aria-hidden="true"></canvas>
           <div class="card-body">
-            <h3 data-en="Local inference">Локальный запуск</h3>
-            <p data-en="The Rust runtime targets local inference on modest hardware, with quantized weights and work split between CPU and GPU.">Рантайм на Rust рассчитан на генерацию текста на скромном железе с квантованными весами и распределением работы между CPU и GPU.</p>
-            <a href="https://github.com/Neuroslop-League/burdaAI/blob/main/docs/stack.md" data-en="Technology stack ↗">Стек проекта ↗</a>
+            <h3 data-pixel="topic" data-en="Local inference">Локальный запуск</h3>
+            <p data-pixel="topic" data-en="The Rust runtime targets local inference on modest hardware, with quantized weights and work split between CPU and GPU.">Рантайм на Rust рассчитан на генерацию текста на скромном железе с квантованными весами и распределением работы между CPU и GPU.</p>
+            <a data-pixel="controls" href="https://github.com/Neuroslop-League/burdaAI/blob/main/docs/stack.md" data-en="Technology stack ↗">Стек проекта ↗</a>
           </div>
         </article>
       </div>
     </section>
 
-    <section class="about" id="about" aria-labelledby="about-title">
-      <h2 id="about-title" data-en="About us">О нас</h2>
-      <p data-en="burda.AI is a language model by Neuroslop League. Our goal is to release a working model you can run locally and train from documented steps.">burda.AI — языковая модель Neuroslop League. Мы хотим выпустить рабочую модель, которую можно запустить локально и обучить по документации.</p>
+    <section class="about" data-topic="about" data-pixel="about" id="about" aria-labelledby="about-title">
+      <h2 id="about-title" data-pixel="about" data-en="About us">О нас</h2>
+      <p data-pixel="topic" data-en="burda.AI is a language model by Neuroslop League. Our goal is to release a working model you can run locally and train from documented steps.">burda.AI — языковая модель Neuroslop League. Мы хотим выпустить рабочую модель, которую можно запустить локально и обучить по документации.</p>
     </section>
   </main>
 
-  <footer>
+  <footer data-pixel="navigation">
     <div class="wrap foot">
-      <span>burda.AI / Neuroslop League</span>
-      <a href="#top" data-en="Back to top ↑">К началу ↑</a>
+      <span data-pixel="navigation">burda.AI / Neuroslop League</span>
+      <a data-pixel="navigation" href="#top" data-en="Back to top ↑">К началу ↑</a>
     </div>
   </footer>
 </body>

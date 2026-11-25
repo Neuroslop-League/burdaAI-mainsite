@@ -23,10 +23,12 @@ theme.hidden = false;
 const language = document.querySelector('#language');
 const translations = Array.from(document.querySelectorAll('[data-en], [data-label-en]'), element => {
   const attribute = element.hasAttribute('data-label-en') ? 'aria-label' : null;
+  const text = attribute ? null : element.firstChild;
   return {
     element,
     attribute,
-    ru: attribute ? element.getAttribute(attribute) : element.textContent,
+    text,
+    ru: attribute ? element.getAttribute(attribute) : text.data,
     en: attribute ? element.dataset.labelEn : element.dataset.en,
   };
 });
@@ -36,11 +38,11 @@ const russianDescription = description.content;
 function setLanguage(value) {
   const english = value === 'en';
   root.lang = english ? 'en' : 'ru';
-  for (const { element, attribute, ru, en } of translations) {
+  for (const { element, attribute, text, ru, en } of translations) {
     if (attribute) element.setAttribute(attribute, english ? en : ru);
-    else element.textContent = english ? en : ru;
+    else text.data = english ? en : ru;
   }
-  language.textContent = english ? 'RU' : 'EN';
+  language.querySelector('span').textContent = english ? 'RU' : 'EN';
   language.lang = english ? 'ru' : 'en';
   language.setAttribute('aria-label', english ? 'Русский' : 'English');
   description.content = english
@@ -130,3 +132,161 @@ paint('runtime', 'orange', [
   ['cream', 11, 10, 2, 1], ['cream', 9, 11, 2, 1], ['lime', 17, 11, 6, 1],
   ['violet', 31, 10, 3, 2], ['ink', 2, 4, 2, 2],
 ]);
+
+const surfaces = {
+  field: ['#644bd0', '#bd8dec', '#69cdbc', '#ee824b'],
+  navigation: ['#65bce8', '#8c9fe8', '#70d8ce', '#b4c8f3'],
+  heading: ['#b693ef', '#e8a4de', '#9abbea', '#d8baf5'],
+  controls: ['#ff795e', '#ffc145', '#ee6ba7', '#ffad76'],
+  model: ['#aa8cf2', '#f47fb3', '#ffa46d', '#72dcca'],
+  training: ['#63c9f5', '#86dfb5', '#b7ee6b', '#9b9bf5'],
+  runtime: ['#ffb75e', '#ee8eac', '#da985a', '#bda0ee'],
+  about: ['#a8df6e', '#5cd3b5', '#f4ce65', '#83dfe3'],
+};
+const motion = document.querySelector('#motion');
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const field = document.querySelector('.pixel-field');
+const targetSelector = '[data-pixel]';
+const textures = new Map();
+let motionOverride;
+let playing;
+let frame = 0;
+let lastPaint = 0;
+let surfaceTime = 0;
+let hover;
+
+function drawTexture(state) {
+  const { canvas, context, colors, cells, columns, size, strength, element } = state;
+  const dark = theme.getAttribute('aria-checked') === 'true';
+  const local = hover?.element === element ? hover : null;
+  context.clearRect(0, 0, canvas.width, canvas.height);
+
+  for (let index = 0; index < cells.length; index++) {
+    const { color, phase, opacity } = cells[index];
+    const x = index % columns * size;
+    const y = Math.floor(index / columns) * size;
+    const pulse = playing ? Math.sin(surfaceTime / 900 + phase) * 0.065 : 0;
+    context.globalAlpha = (opacity + pulse) * strength * (dark ? 0.94 : 1);
+    context.fillStyle = colors[color];
+    context.fillRect(x, y, size, size);
+
+    if (local) {
+      const distance = Math.hypot(x + size / 2 - local.x, y + size / 2 - local.y);
+      const age = surfaceTime - local.start - distance * 3;
+      const radius = Math.max(48, size * 6);
+      if (distance < radius && age >= 0) {
+        context.globalAlpha = (1 - distance / radius) * (0.12 + 0.09 * Math.sin(age / 160));
+        context.fillStyle = colors[(color + 1) % colors.length];
+        context.fillRect(x, y, size, size);
+      }
+    }
+  }
+}
+
+function fitTexture(state) {
+  const { element, canvas, size } = state;
+  canvas.width = element.clientWidth;
+  canvas.height = element.clientHeight;
+  state.columns = Math.ceil(canvas.width / size);
+  const count = state.columns * Math.ceil(canvas.height / size);
+  while (state.cells.length < count) {
+    state.cells.push({
+      color: Math.floor(Math.random() * state.colors.length),
+      phase: Math.random() * Math.PI * 2,
+      opacity: 0.08 + Math.random() * 0.27,
+    });
+  }
+  state.cells.length = count;
+  drawTexture(state);
+}
+
+const visibility = new IntersectionObserver(entries => {
+  for (const { target, isIntersecting } of entries) {
+    const state = textures.get(target);
+    state.visible = isIntersecting;
+    if (isIntersecting) drawTexture(state);
+  }
+});
+const resize = new ResizeObserver(entries => {
+  for (const { target } of entries) fitTexture(textures.get(target));
+});
+
+for (const element of [field, ...document.querySelectorAll(targetSelector)]) {
+  const isField = element === field;
+  const canvas = isField ? field : document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  if (!context) continue;
+  if (isField) {
+    document.body.classList.add('has-pixel-field');
+  } else {
+    canvas.className = 'pixel-texture';
+    canvas.setAttribute('aria-hidden', 'true');
+    element.prepend(canvas);
+  }
+  const key = isField ? 'field' : element.dataset.pixel;
+  const compact = element.matches('button, a, h1, h2, h3, p, .foot span');
+  const category = key === 'topic' ? element.closest('[data-topic]').dataset.topic : key;
+  textures.set(element, {
+    element,
+    canvas,
+    context,
+    colors: surfaces[category],
+    cells: [],
+    columns: 0,
+    size: compact ? 8 : 20,
+    strength: isField ? 0.8 : compact ? 0.42 : 1,
+    visible: false,
+  });
+  resize.observe(element);
+  visibility.observe(element);
+}
+
+function animate(now) {
+  if (!lastPaint || now - lastPaint >= 80) {
+    surfaceTime += lastPaint ? Math.min(now - lastPaint, 160) : 0;
+    lastPaint = now;
+    for (const state of textures.values()) if (state.visible) drawTexture(state);
+  }
+  frame = requestAnimationFrame(animate);
+}
+
+function syncMotion() {
+  playing = motionOverride ?? !reducedMotion.matches;
+  motion.setAttribute('aria-checked', String(playing));
+  motion.querySelector('span').textContent = playing ? 'Ⅱ' : '▶';
+  cancelAnimationFrame(frame);
+  lastPaint = 0;
+  if (playing && !document.hidden) {
+    frame = requestAnimationFrame(animate);
+  } else {
+    hover = null;
+    for (const state of textures.values()) if (state.visible) drawTexture(state);
+  }
+}
+
+motion.addEventListener('click', () => {
+  motionOverride = !playing;
+  syncMotion();
+});
+reducedMotion.addEventListener('change', syncMotion);
+document.addEventListener('visibilitychange', syncMotion);
+for (const target of [theme, systemTheme]) {
+  target.addEventListener(target === theme ? 'click' : 'change', () => {
+    for (const state of textures.values()) if (state.visible) drawTexture(state);
+  });
+}
+
+document.addEventListener('pointermove', event => {
+  if (!playing || event.pointerType !== 'mouse') return;
+  const element = event.target.closest(targetSelector) ?? field;
+  const bounds = element.getBoundingClientRect();
+  const x = event.clientX - bounds.left;
+  const y = event.clientY - bounds.top;
+  const nearby = hover?.element === element && Math.hypot(x - hover.x, y - hover.y) < 12;
+  hover = { element, x, y, start: nearby ? hover.start : surfaceTime };
+}, { passive: true });
+document.documentElement.addEventListener('pointerleave', () => { hover = null; });
+addEventListener('scroll', () => { hover = null; }, { passive: true });
+
+syncMotion();
+motion.hidden = false;

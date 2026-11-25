@@ -1,18 +1,20 @@
 # burdaAI
 
-Сайт проекта Neuroslop League на Rust, Axum и Askama. Хранит статьи, сессии и состав мейнтейнеров в SQLite. Публичные страницы показывают статьи, вклад мейнтейнеров, дерево pull request’ов основной ветки и карту компонентов [burdaAI](https://github.com/Neuroslop-League/burdaAI).
+The Neuroslop League website for [burdaAI](https://github.com/Neuroslop-League/burdaAI), built with Rust, Axum, and Askama. Public pages include project articles, maintainer profiles and GitHub activity, an interactive component map, and a tree of pull requests targeting the model repository's default branch. SQLite stores articles, sessions, and maintainer roles.
 
-## Локальный запуск
+## Run locally
+
+From the repository root, run:
 
     cargo run --locked
 
-Откройте [локальный сайт](http://127.0.0.1:3000/). При первом запуске сервер создаёт `burdaai.db` и применяет миграции. Для другого файла SQLite задайте `DATABASE_PATH`, для другого адреса сервера — `BIND_ADDR`. Запускайте из корня репозитория.
+Open [the local site](http://127.0.0.1:3000/). On first startup, the server creates `burdaai.db` and applies its migrations. Set `DATABASE_PATH` to use a different SQLite file or `BIND_ADDR` to change the server address.
 
-Публичные страницы работают без входа. Дерево и вклад читаются через GitHub REST API. При частых запросах можно передать `GITHUB_API_TOKEN` с доступом на чтение публичных репозиториев. Результаты кэшируются в памяти на 15 минут. Если обновление не удалось, сайт показывает последний успешный ответ за время работы сервера.
+Public pages do not require sign-in. The pull request tree and maintainer activity use the GitHub REST API. You can set `GITHUB_API_TOKEN` to a token with read access to the public repositories for a higher rate limit. Responses are cached in memory for 15 minutes. If a refresh fails, the site shows the latest successful response from the current server process.
 
-## Вход и редактор
+## GitHub sign-in and article editor
 
-Создайте локальное [GitHub OAuth App](https://github.com/settings/developers). Укажите homepage `http://127.0.0.1:3000/` и callback `http://127.0.0.1:3000/auth/github/callback`. Сохраните Client ID и Client Secret в локальном файле `.env`:
+Create a local [GitHub OAuth App](https://github.com/settings/developers) with `http://127.0.0.1:3000/` as its homepage and `http://127.0.0.1:3000/auth/github/callback` as its callback URL. Set the client ID and client secret in a local `.env` file:
 
     GITHUB_CLIENT_ID=
     GITHUB_CLIENT_SECRET=
@@ -21,11 +23,15 @@
     # DATABASE_PATH=burdaai.db
     # BIND_ADDR=127.0.0.1:3000
 
-Перезапустите сервер и откройте [редактор](http://127.0.0.1:3000/studio). Основатель **RUdolf1517** управляет списком мейнтейнеров. Каждый мейнтейнер пишет и публикует свои статьи. Сохранение правок опубликованной статьи сразу обновляет публичную версию. Снятие с публикации возвращает статью в черновики.
+Restart the server and open [Studio](http://127.0.0.1:3000/studio). The founder, **RUdolf1517**, manages the maintainer roster. Maintainers can draft, preview, and publish their own Markdown articles. Saving a published article updates its public version immediately. Unpublishing returns it to drafts.
 
-## Проверки
+## Checks
 
     cargo fmt --check
     cargo test --locked
 
-Интеграционные тесты используют отдельную временную БД и подменённый HTTP-сервер GitHub. Для ручной проверки реального входа используйте своё локальное OAuth-приложение.
+Integration tests use a temporary SQLite database and a mock GitHub HTTP server. Use your local OAuth app to test real GitHub sign-in.
+
+## License
+
+The site code is available under the [MIT License](LICENSE). The bundled Press Start 2P font is distributed under the [SIL Open Font License 1.1](static/assets/OFL.txt).

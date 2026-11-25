@@ -51,50 +51,47 @@ function registerArtwork(id, background, blocks, motion) {
 
 function paintArtwork(scene, step) {
   const { canvas, context, background, blocks, motion } = scene;
-  const light = theme.getAttribute('aria-checked') === 'false';
-  const colors = canvas.id === 'landscape' && light ? daylight : palette;
-  context.fillStyle = colors[background];
-  context.fillRect(0, 0, canvas.width, canvas.height);
+  if (background) {
+    context.fillStyle = palette[background];
+    context.fillRect(0, 0, canvas.width, canvas.height);
+  } else {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+  }
   for (const [color, x, y, width = 1, height = 1] of blocks.concat(motion(step))) {
-    context.fillStyle = colors[color];
+    context.fillStyle = palette[color] ?? color;
     context.fillRect(x, y, width, height);
   }
   scene.step = step;
 }
 
-const daylight = {
-  ...palette,
-  night: '#44315f', dusk: '#7765bb', blue: '#aa9ae9',
-  violet: '#e8dbfc', purple: '#967eca', peach: '#ffd2a1', cream: '#fff8e7',
-};
-registerArtwork('landscape', 'blue', [
-  ['dusk', 0, 0, 48, 6], ['dusk', 0, 6, 48, 3],
-  ['purple', 0, 20, 48, 5], ['violet', 0, 25, 48, 3],
-  ['cream', 4, 5], ['purple', 9, 9, 2], ['violet', 15, 3], ['lime', 23, 6],
-  ['violet', 43, 4], ['peach', 39, 15], ['violet', 5, 14], ['peach', 44, 18, 3],
-  ['orange', 32, 5, 8, 1], ['orange', 30, 6, 12, 2], ['orange', 29, 8, 14, 6],
-  ['orange', 30, 14, 12, 2], ['orange', 32, 16, 8, 1],
-  ['peach', 30, 8, 12, 1], ['peach', 29, 11, 14, 1], ['peach', 30, 14, 12, 1],
-  ['night', 0, 25, 48, 11],
-  ['violet', 0, 22, 4, 3], ['violet', 4, 20, 3, 6], ['violet', 7, 18, 3, 9],
-  ['violet', 10, 15, 3, 13], ['violet', 13, 12, 4, 16], ['violet', 17, 14, 3, 13],
-  ['violet', 20, 17, 3, 10], ['violet', 23, 19, 3, 8], ['violet', 26, 22, 3, 5],
-  ['cream', 13, 12, 4, 2], ['cream', 11, 14, 6, 2], ['cream', 10, 16, 3],
-  ['purple', 16, 15, 4, 4], ['purple', 18, 19, 5, 3], ['purple', 20, 22, 6, 3],
-  ['dusk', 37, 21, 3, 5], ['dusk', 40, 19, 5, 7], ['dusk', 45, 22, 3, 4],
-  ['green', 0, 29, 10, 1], ['lime', 7, 28, 8, 1], ['lime', 14, 27, 5, 1],
-  ['lime', 18, 28, 6, 1], ['lime', 23, 29, 10, 1], ['lime', 32, 28, 5, 1],
-  ['lime', 36, 27, 5, 1], ['green', 40, 26, 8, 1],
-  ['green', 25, 30, 6, 2], ['lime', 26, 32, 5, 1], ['lime', 29, 33, 9, 1],
-  ['lime', 34, 34, 9, 2], ['purple', 7, 32, 2, 2], ['orange', 13, 34], ['violet', 45, 32, 3, 1],
-], step => {
-  const trail = step % 12;
-  return [
-    ['peach', 26 + trail, 11, 4], ['peach', 31 + (trail + 4) % 10, 14, 2],
-    [step % 8 < 4 ? 'cream' : 'violet', 15, 3],
-    [step % 10 < 5 ? 'lime' : 'purple', 23, 6],
-    ['green', 29 + trail, 33, 2], ['lime', 34 + trail % 7, 35, 2],
-  ];
+const skyStars = [[8, 8], [19, 17], [45, 5], [63, 13], [89, 8], [112, 19], [130, 10], [186, 15]];
+const routeLights = [[83, 125], [95, 121], [111, 117], [126, 110], [123, 106], [114, 103], [107, 100], [117, 97], [127, 94]];
+let scenePointer;
+
+registerArtwork('home-effects', null, [], step => {
+  const pixels = skyStars.map(([x, y], index) => {
+    const bright = (step + index * 3) % 19 < 4;
+    return [bright ? 'cream' : '#d8c5ef80', x, y, bright ? 2 : 1];
+  });
+
+  const meteor = step % 64;
+  if (meteor >= 2 && meteor < 18) {
+    const x = 51 + meteor * 3;
+    const y = 4 + Math.floor(meteor / 2);
+    pixels.push(['cream', x, y, 3], ['#d6b2ed80', x - 4, y - 1, 4]);
+  }
+
+  const scan = 53 + step % 20;
+  pixels.push(['#d7fa3e45', 118, scan, 28], ['#9be35e30', 118, scan - 1, 28]);
+  const [x, y] = routeLights[step % routeLights.length];
+  pixels.push(['#fffdd6bd', x, y, 2, 2], ['#ffdd5080', 44, 78, 1, step % 8 < 4 ? 2 : 1]);
+
+  if (scenePointer) {
+    const { x, y } = scenePointer;
+    pixels.push(['#fff8eaba', x - 7, y, 4], ['#fff8eaba', x + 4, y, 4],
+      ['#fff8eaba', x, y - 7, 1, 4], ['#fff8eaba', x, y + 4, 1, 4]);
+  }
+  return pixels;
 });
 
 registerArtwork('model', 'violet', [
@@ -146,6 +143,8 @@ const surfaces = {
 };
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const field = document.querySelector('.pixel-field');
+const sceneCanvas = document.querySelector('#home-effects');
+const homepage = sceneCanvas !== null;
 const targetSelector = '[data-pixel]';
 const textures = new Map();
 let playing;
@@ -177,7 +176,7 @@ function drawTexture(state) {
   const { canvas, context, category, cells, columns, size, strength, element } = state;
   const dark = theme.getAttribute('aria-checked') === 'true';
   const colors = surfaces[!dark && category === 'field' ? 'daylight' : category];
-  const intensity = strength * (dark ? 1 : 0.74);
+  const intensity = strength * (dark ? 1 : 0.74) * (homepage ? 0.62 : 1);
   const local = hover?.element === element ? hover : null;
   context.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -293,6 +292,7 @@ function syncMotion() {
     frame = requestAnimationFrame(animate);
   } else {
     hover = null;
+    scenePointer = null;
     if (!playing) for (const scene of artwork.values()) paintArtwork(scene, 0);
     for (const state of textures.values()) if (state.visible) drawTexture(state);
   }
@@ -309,6 +309,17 @@ for (const target of [theme, systemTheme]) {
 
 document.addEventListener('pointermove', event => {
   if (!playing || event.pointerType !== 'mouse') return;
+  scenePointer = null;
+  if (sceneCanvas && event.target.closest('.home-scene')) {
+    const rect = sceneCanvas.getBoundingClientRect();
+    const scale = Math.max(rect.width / sceneCanvas.width, rect.height / sceneCanvas.height);
+    scenePointer = {
+      x: Math.floor((event.clientX - rect.left - rect.width / 2) / scale + sceneCanvas.width / 2),
+      y: Math.floor((event.clientY - rect.top - rect.height / 2) / scale + sceneCanvas.height / 2),
+    };
+    hover = null;
+    return;
+  }
   const element = event.target.closest(targetSelector) ?? field;
   const bounds = element.getBoundingClientRect();
   const x = event.clientX - bounds.left;
@@ -316,7 +327,11 @@ document.addEventListener('pointermove', event => {
   const nearby = hover?.element === element && Math.hypot(x - hover.x, y - hover.y) < 12;
   hover = { element, x, y, start: nearby ? hover.start : surfaceTime };
 }, { passive: true });
-document.documentElement.addEventListener('pointerleave', () => { hover = null; });
-addEventListener('scroll', () => { hover = null; }, { passive: true });
+function clearPointer() {
+  hover = null;
+  scenePointer = null;
+}
+document.documentElement.addEventListener('pointerleave', clearPointer);
+addEventListener('scroll', clearPointer, { passive: true });
 
 syncMotion();

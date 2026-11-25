@@ -1,12 +1,27 @@
-    <section class="hero" aria-labelledby="title">
+<div class="home-page">
+    <div class="home-progress" aria-hidden="true"></div>
+    <section class="hero home-hero" aria-labelledby="title">
       <div class="intro" data-pixel="heading">
         <p class="league" data-pixel="heading">Neuroslop League</p>
         <h1 id="title" data-pixel="heading" aria-label="burdaAI">burda<span>AI</span></h1>
+        <p class="home-description">{% if en %}A language model built to run locally.{% else %}Языковая модель для локального запуска.{% endif %}</p>
         <p class="slogan" data-pixel="slogan">{% if en %}burda together, burmalda forever.{% else %}Я бурда и ты бурда, получается хуйня.{% endif %}</p>
-        <a class="cta" data-pixel="controls" href="/project/map">{% if en %}Explore the project{% else %}Изучить проект{% endif %} <span aria-hidden="true">↗</span></a>
+        <div class="home-hero-actions">
+          <a class="cta home-primary" data-pixel="controls" href="/project/map">{% if en %}Explore the project{% else %}Изучить проект{% endif %} <span aria-hidden="true">↗</span></a>
+          <a class="cta home-secondary" data-pixel="controls" href="/project/tree">{% if en %}PR tree{% else %}Дерево PR{% endif %} <span aria-hidden="true">↗</span></a>
+        </div>
       </div>
-      <div class="hero-art" aria-hidden="true"><canvas id="landscape" width="48" height="36"></canvas></div>
+      <figure class="hero-art home-scene" aria-hidden="true">
+        <img src="/static/assets/burda-station.webp" alt="" width="1536" height="1024" fetchpriority="high">
+        <canvas id="home-effects" width="192" height="128"></canvas>
+        <i class="scene-corner"></i><i class="scene-corner"></i><i class="scene-corner"></i><i class="scene-corner"></i>
+      </figure>
     </section>
+    <dl class="home-specs" aria-label="{% if en %}Model specifications{% else %}Характеристики модели{% endif %}">
+      <div data-pixel="model"><dt>{% if en %}Transformer layers{% else %}Слоёв Transformer{% endif %}</dt><dd>20</dd></div>
+      <div data-pixel="training"><dt>{% if en %}Context tokens{% else %}Токенов контекста{% endif %}</dt><dd>4096</dd></div>
+      <div data-pixel="runtime"><dt>{% if en %}Local runtime{% else %}Локальный рантайм{% endif %}</dt><dd>Rust</dd></div>
+    </dl>
 
     <section class="project" id="project" aria-labelledby="project-title">
       <div class="section-head" data-pixel="heading">
@@ -48,5 +63,12 @@
 
     <section class="about" data-topic="about" data-pixel="about" id="about" aria-labelledby="about-title">
       <h2 id="about-title" data-pixel="about">{% if en %}About us{% else %}О нас{% endif %}</h2>
-      <p data-pixel="topic">{% if en %}burdaAI is a language model by Neuroslop League. Our goal is to release a working model you can run locally and train from documented steps.{% else %}burdaAI — языковая модель Neuroslop League. Мы хотим выпустить рабочую модель, которую можно запустить локально и обучить по документации.{% endif %}</p>
+      <div>
+        <p data-pixel="topic">{% if en %}Neuroslop League is building a model you can run locally and train from documented steps.{% else %}Neuroslop League разрабатывает модель, которую можно запустить локально и обучить по документации.{% endif %}</p>
+        <div class="home-about-links">
+          <a href="/articles" data-pixel="controls">{% if en %}Project articles{% else %}Статьи проекта{% endif %} ↗</a>
+          <a href="/maintainers" data-pixel="controls">{% if en %}Maintainers{% else %}Мейнтейнеры{% endif %} ↗</a>
+        </div>
+      </div>
     </section>
+</div>

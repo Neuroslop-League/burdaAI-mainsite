@@ -50,6 +50,10 @@
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
   color: var(--ink);
   background: var(--field) conic-gradient(var(--tiles) 25%, transparent 0 50%, var(--tiles) 0 75%, transparent 0) 0 0 / 36px 36px;
@@ -172,6 +176,7 @@ h3 { font-size: clamp(12px, 1.35vw, 16px); line-height: 1.55; font-weight: 400; 
   color: #191917;
 }
 .about p { max-width: 61ch; }
+body > main { flex: 1; }
 footer { margin-top: 40px; border-top: 2px solid var(--line); }
 .foot { min-height: 68px; font-size: 10px; }
 

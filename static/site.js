@@ -170,7 +170,9 @@ for (const scene of artwork.values()) {
   paintArtwork(scene, 0);
   enterView.observe(scene.canvas);
 }
-for (const element of document.querySelectorAll('.card, .about')) enterView.observe(element);
+for (const element of document.querySelectorAll(
+  '.card, .about, .site-panel, .item-list > li, .component-map > li, .pr-card'
+)) enterView.observe(element);
 
 function drawTexture(state) {
   const { canvas, context, category, cells, columns, size, strength, element } = state;
@@ -293,6 +295,7 @@ function syncMotion() {
   } else {
     hover = null;
     scenePointer = null;
+    document.querySelectorAll('.pixel-burst').forEach(burst => burst.remove());
     if (!playing) for (const scene of artwork.values()) paintArtwork(scene, 0);
     for (const state of textures.values()) if (state.visible) drawTexture(state);
   }
@@ -333,5 +336,36 @@ function clearPointer() {
 }
 document.documentElement.addEventListener('pointerleave', clearPointer);
 addEventListener('scroll', clearPointer, { passive: true });
+
+const burstTargets = 'button:not(:disabled), .cta, .action, .language, .subnav a, .pr-trunk';
+const burstDirections = [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]];
+document.addEventListener('click', event => {
+  if (!playing || event.defaultPrevented) return;
+  const control = event.target.closest(burstTargets);
+  if (!control) return;
+
+  const bounds = control.getBoundingClientRect();
+  const left = (event.detail === 0 ? bounds.width / 2 : event.clientX - bounds.left) - 2;
+  const top = (event.detail === 0 ? bounds.height / 2 : event.clientY - bounds.top) - 2;
+  const previous = control.querySelector(':scope > .pixel-burst');
+  previous?.remove();
+
+  const burst = document.createElement('span');
+  burst.className = 'pixel-burst';
+  burst.setAttribute('aria-hidden', 'true');
+  control.append(burst);
+  const animations = burstDirections.map(([x, y], index) => {
+    const pixel = document.createElement('i');
+    burst.append(pixel);
+    const distance = index % 2 ? 19 : 26;
+    const endX = Math.max(-bounds.left, Math.min(left + x * distance, root.clientWidth - bounds.left - 5));
+    const endY = Math.max(-bounds.top, Math.min(top + y * distance, root.clientHeight - bounds.top - 5));
+    return pixel.animate([
+      { transform: `translate(${left}px, ${top}px) scale(1)`, opacity: 1 },
+      { transform: `translate(${endX}px, ${endY}px) scale(.4)`, opacity: 0 },
+    ], { duration: 300, easing: 'steps(6, end)' });
+  });
+  Promise.allSettled(animations.map(animation => animation.finished)).then(() => burst.remove());
+});
 
 syncMotion();

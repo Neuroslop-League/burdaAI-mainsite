@@ -251,19 +251,7 @@ p, .card a { font-family: var(--pixel); font-size: 10px; line-height: 1.85; font
   .card[data-topic="training"] { animation-delay: 65ms; }
   .card[data-topic="runtime"] { animation-delay: 130ms; }
   .card:is(:hover, :focus-within) .cover { animation: cover-signal 300ms steps(3, end) both; }
-  :is(.cta, button, nav a, .card a):is(:hover, :focus-visible)::after {
-    content: "";
-    position: absolute;
-    bottom: 2px;
-    left: 3px;
-    width: 4px;
-    height: 4px;
-    background: var(--orange);
-    box-shadow: 5px 0 var(--violet);
-    animation: control-signal 320ms steps(5, end) both;
-    pointer-events: none;
-  }
-  :is(.cta, button):active { translate: 2px 2px; }
+
 }
 
 @keyframes logo-turn {
@@ -293,11 +281,6 @@ p, .card a { font-family: var(--pixel); font-size: 10px; line-height: 1.85; font
 @keyframes cover-signal {
   50% { filter: saturate(1.35) brightness(1.08); }
 }
-@keyframes control-signal {
-  from { left: 3px; }
-  to { left: calc(100% - 12px); }
-}
-
 /* Shared layouts for the project pages and editor. */
 .language, .action, .subnav a {
   display: inline-flex;
@@ -676,4 +659,147 @@ body:has(.home-page) :is(header, footer) { background: light-dark(#f4eafb, #1d19
 @keyframes home-read-progress {
   from { transform: scaleX(0); }
   to { transform: scaleX(1); }
+}
+
+:where(button, .cta, .action, .language, .subnav a, .main-nav a, .foot a, .card a, .home-about-links a, .pr-card, .pr-trunk, .component-map a) {
+  --motion-accent: var(--violet);
+  position: relative;
+}
+:where(.home-primary, .primary, .pr-trunk, button[aria-pressed="true"], a[aria-current="page"]) { --motion-accent: var(--lime); }
+:where(button[name="intent"][value="unpublish"], button[data-filter="runtime"]) { --motion-accent: var(--orange); }
+
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+  ::view-transition { pointer-events: none; }
+  ::view-transition-old(root) { animation: none; }
+  ::view-transition-new(root) { animation: page-unfold 240ms steps(5, end) both; }
+
+  html { scroll-behavior: smooth; }
+
+  :is(button, .cta, .action, .language, .subnav a, .pr-trunk) {
+    transition: translate 125ms steps(2, end), box-shadow 170ms steps(3, end), background-color 190ms linear, color 190ms linear;
+  }
+  :is(button, .cta, .action, .language, .subnav a, .pr-trunk):not(:disabled):is(:hover, :focus-visible) {
+    translate: 0 -2px;
+    box-shadow: 0 3px var(--motion-accent);
+  }
+  :is(button, .home-hero-actions .cta, .cta, .action, .language, .subnav a, .pr-trunk):not(:disabled):active {
+    translate: 2px 2px;
+    box-shadow: 0 0 transparent;
+  }
+
+  :is(button, .cta, .action, .language, .subnav a, .pr-trunk)::before,
+  :is(button, .cta, .action, .language, .subnav a, .pr-trunk)::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    opacity: 0;
+  }
+  :is(button, .cta, .action, .language, .subnav a, .pr-trunk)::before {
+    inset: 2px;
+    background: repeating-linear-gradient(90deg, transparent 0 5px, var(--motion-accent) 5px 11px);
+    clip-path: inset(0 100% 0 0);
+  }
+  :is(button, .cta, .action, .language, .subnav a, .pr-trunk)::after {
+    inset: 2px 2px auto auto;
+    width: 5px;
+    height: 5px;
+    background: var(--motion-accent);
+    box-shadow: -6px 0 var(--orange), 0 6px var(--violet);
+  }
+  :is(button, .cta, .action, .language, .subnav a, .pr-trunk):not(:disabled):is(:hover, :focus-visible)::before {
+    animation: button-sweep 440ms steps(8, end);
+  }
+  :is(button, .cta, .action, .language, .subnav a, .pr-trunk):not(:disabled):is(:hover, :focus-visible)::after {
+    animation: button-corners 360ms steps(3, end) both;
+  }
+  :is(button[aria-pressed="true"], a[aria-current="page"], #theme[aria-checked="true"])::after {
+    opacity: .75;
+    animation: selected-signal 2.8s steps(1, end) infinite;
+  }
+  #theme > span {
+    display: inline-block;
+    transition: rotate 260ms steps(5, end);
+  }
+  #theme[aria-checked="true"] > span { rotate: 180deg; }
+  .home-hero-actions .cta span {
+    display: inline-block;
+    transition: translate 160ms steps(3, end);
+  }
+  .home-hero-actions .cta:is(:hover, :focus-visible) span { translate: 3px -2px; }
+
+  :is(.main-nav a, .foot a, .card a, .home-about-links a, .component-map a)::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0;
+    height: 3px;
+    background: repeating-linear-gradient(90deg, var(--violet) 0 5px, var(--orange) 5px 9px, transparent 9px 11px);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 210ms steps(5, end);
+    pointer-events: none;
+  }
+  :is(.main-nav a, .foot a, .card a, .home-about-links a, .component-map a):is(:hover, :focus-visible)::after { transform: scaleX(1); }
+
+  .pixel-burst { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
+  .pixel-burst > i { position: absolute; inset: 0 auto auto 0; width: 5px; height: 5px; background: var(--motion-accent); }
+  .pixel-burst > i:nth-child(3n + 2) { background: var(--orange); }
+  .pixel-burst > i:nth-child(3n) { background: var(--lime); }
+
+  :is(.site-panel, .item-list > li, .component-map > li, .pr-card).pixel-entered { animation: panel-assemble 380ms steps(5, end) both; }
+  :is(.item-list, .component-map) > li:nth-child(3n + 2).pixel-entered { animation-delay: 55ms; }
+  :is(.item-list, .component-map) > li:nth-child(3n).pixel-entered { animation-delay: 110ms; }
+  .pr-branch:nth-child(even) .pr-card.pixel-entered { animation-delay: 70ms; }
+  .pr-branch:has(.pr-card:is(:hover, :focus-visible)) .pr-connector {
+    animation: branch-signal 720ms steps(4, end) both;
+  }
+  .pr-card, .component-map li, .item-list > li {
+    transition: box-shadow 180ms steps(3, end), background-color 180ms linear;
+  }
+  .pr-card:is(:hover, :focus-visible) { box-shadow: 6px 6px var(--branch-color); }
+  .component-map li:is(:hover, :focus-within) { box-shadow: 6px 6px var(--violet); }
+  .item-list > li:is(:hover, :focus-within) { background: light-dark(#e6daf3, #352b49); }
+
+  :is(.editor-form, .maintainer-form) :is(input, select, textarea) {
+    transition: box-shadow 170ms steps(3, end);
+  }
+  :is(.editor-form, .maintainer-form) :is(input, select, textarea):focus-visible {
+    box-shadow: 3px 3px var(--violet);
+    caret-color: var(--focus);
+  }
+  :is(.preview, .notice) { animation: panel-assemble 350ms 80ms steps(5, end) both; }
+
+  @media (hover: hover) and (pointer: fine) {
+    .home-scene :is(img, canvas) { transition: scale 370ms steps(7, end); }
+    .home-scene:hover :is(img, canvas) { scale: 1.025; }
+    .home-specs > div:hover dd { animation: spec-jump 340ms steps(4, end); }
+  }
+}
+@keyframes button-sweep {
+  0% { opacity: 0; clip-path: inset(0 100% 0 0); }
+  25% { opacity: .28; }
+  65% { opacity: .15; }
+  100% { opacity: 0; clip-path: inset(0 0 0 100%); }
+}
+@keyframes button-corners {
+  from { opacity: 0; translate: -5px 5px; }
+  to { opacity: .8; translate: 0 0; }
+}
+@keyframes selected-signal {
+  55% { opacity: .28; }
+  72% { opacity: .75; }
+}
+@keyframes page-unfold {
+  from { clip-path: inset(0 0 22% 0); opacity: .66; }
+  to { clip-path: inset(0); opacity: 1; }
+}
+@keyframes panel-assemble {
+  from { opacity: .55; translate: 0 7px; }
+  to { opacity: 1; translate: 0 0; }
+}
+@keyframes branch-signal {
+  50% { filter: brightness(1.55); }
+}
+@keyframes spec-jump {
+  50% { translate: 0 -4px; text-shadow: 3px 3px var(--violet); }
 }

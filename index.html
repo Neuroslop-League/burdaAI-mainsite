@@ -11,6 +11,7 @@
       if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
     } catch {}
   </script>
+  <link rel="icon" href="assets/favicon.png" type="image/png">
   <link rel="stylesheet" href="styles.css">
   <script src="site.js" defer></script>
 </head>
@@ -72,7 +73,7 @@
           <canvas class="cover" id="runtime" width="36" height="17" aria-hidden="true"></canvas>
           <div class="card-body">
             <h3 data-en="Local inference">Локальный запуск</h3>
-            <p data-en="The Rust runtime targets local inference on modest hardware, with quantized weights and work split between CPU and GPU.">Рантайм на Rust рассчитан на вывод на скромном железе с квантованными весами и распределением работы между CPU и GPU.</p>
+            <p data-en="The Rust runtime targets local inference on modest hardware, with quantized weights and work split between CPU and GPU.">Рантайм на Rust рассчитан на генерацию текста на скромном железе с квантованными весами и распределением работы между CPU и GPU.</p>
             <a href="https://github.com/Neuroslop-League/burdaAI/blob/main/docs/stack.md" data-en="Technology stack ↗">Стек проекта ↗</a>
           </div>
         </article>

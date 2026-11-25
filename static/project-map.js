@@ -1,4 +1,4 @@
-{
+(() => {
   const map = document.querySelector('.project-map');
   const stage = map.querySelector('.brain-viewport');
   const canvas = stage.querySelector('.map-wires');
@@ -287,4 +287,4 @@
   reduced.addEventListener('change', syncMotion);
   document.addEventListener('visibilitychange', syncMotion);
   measure();
-}
+})();

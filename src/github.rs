@@ -1,5 +1,4 @@
 use std::{
-    collections::BTreeMap,
     future::Future,
     sync::Arc,
     time::{Duration, Instant},
@@ -96,44 +95,47 @@ impl GitHub {
     async fn load_tree(&self) -> Fetch<Tree> {
         let repo = REPOSITORIES[0];
         let (details, _): (Repository, _) = self.fetch(self.repo_url(repo, &[])).await?;
-        let (tip, _): (CommitTip, _) = self
-            .fetch(self.repo_url(repo, &["commits", &details.default_branch]))
-            .await?;
-        let mut recursive = self.repo_url(repo, &["git", "trees", &tip.commit.tree.sha]);
-        recursive.query_pairs_mut().append_pair("recursive", "1");
-        let (response, _): (GitTree, _) = self.fetch(recursive).await?;
-        let mut root = Node::default();
-
-        if response.truncated {
-            let mut pending = vec![(String::new(), tip.commit.tree.sha)];
-            while let Some((prefix, sha)) = pending.pop() {
-                let (subtree, _): (GitTree, _) = self
-                    .fetch(self.repo_url(repo, &["git", "trees", &sha]))
-                    .await?;
-                if subtree.truncated {
-                    return Err("GitHub truncated a non-recursive subtree".into());
-                }
-                for entry in subtree.tree {
-                    let path = format!("{prefix}{}", entry.path);
-                    let folder = entry.kind == "tree";
-                    root.insert(&path, folder);
-                    if folder {
-                        pending.push((format!("{path}/"), entry.sha));
-                    }
-                }
-            }
-        } else {
-            for entry in response.tree {
-                root.insert(&entry.path, entry.kind == "tree");
+        let mut branches = Vec::new();
+        for page in 1.. {
+            let (pulls, more) = self
+                .pull_page(repo, Some(&details.default_branch), page)
+                .await?;
+            branches.extend(pulls.into_iter().map(|pull| TreeBranch {
+                state: pull.status(),
+                url: web_url(repo, &["pull", &pull.number.to_string()]),
+                number: pull.number,
+                name: pull.head.name,
+                title: pull.title,
+            }));
+            if !more {
+                break;
             }
         }
-        let mut rows = Vec::new();
-        root.rows("", &tip.sha, &mut rows);
         Ok(Tree {
+            url: web_url(repo, &["tree", &details.default_branch]),
             branch: details.default_branch,
-            sha: tip.sha,
-            rows,
+            branches,
         })
+    }
+
+    async fn pull_page(
+        &self,
+        repo: &str,
+        base: Option<&str>,
+        page: u32,
+    ) -> Fetch<(Vec<GitPull>, bool)> {
+        let mut url = self.repo_url(repo, &["pulls"]);
+        url.query_pairs_mut().extend_pairs([
+            ("state", "all"),
+            ("sort", "created"),
+            ("direction", "desc"),
+            ("per_page", "100"),
+            ("page", &page.to_string()),
+        ]);
+        if let Some(base) = base {
+            url.query_pairs_mut().append_pair("base", base);
+        }
+        self.fetch(url).await
     }
 
     async fn load_activity(&self) -> Fetch<Vec<Activity>> {
@@ -191,15 +193,7 @@ impl GitHub {
             }
         }
         for page in 1.. {
-            let mut url = self.repo_url(repo, &["pulls"]);
-            url.query_pairs_mut().extend_pairs([
-                ("state", "all"),
-                ("sort", "created"),
-                ("direction", "desc"),
-                ("per_page", "100"),
-                ("page", &page.to_string()),
-            ]);
-            let (pulls, more): (Vec<GitPull>, _) = self.fetch(url).await?;
+            let (pulls, more) = self.pull_page(repo, None, page).await?;
             let mut reached_cutoff = false;
             for pull in pulls {
                 let Some(at) = parse_date(&pull.created_at) else {
@@ -209,16 +203,8 @@ impl GitHub {
                     reached_cutoff = true;
                     break;
                 }
+                let state = pull.status();
                 let Some(author) = pull.user else { continue };
-                let state = if pull.merged_at.is_some() {
-                    "merged"
-                } else if pull.draft {
-                    "draft"
-                } else if pull.state == "open" {
-                    "open"
-                } else {
-                    "closed"
-                };
                 events.push(Activity {
                     author_id: author.id,
                     repo,
@@ -271,87 +257,18 @@ struct Repository {
     default_branch: String,
 }
 
-#[derive(Deserialize)]
-struct CommitTip {
-    sha: String,
-    commit: CommitTree,
-}
-
-#[derive(Deserialize)]
-struct CommitTree {
-    tree: TreeRef,
-}
-
-#[derive(Deserialize)]
-struct TreeRef {
-    sha: String,
-}
-
-#[derive(Deserialize)]
-struct GitTree {
-    truncated: bool,
-    tree: Vec<GitTreeEntry>,
-}
-
-#[derive(Deserialize)]
-struct GitTreeEntry {
-    path: String,
-    #[serde(rename = "type")]
-    kind: String,
-    sha: String,
-}
-
-#[derive(Default)]
-struct Node {
-    folder: bool,
-    children: BTreeMap<String, Node>,
-}
-
-impl Node {
-    fn insert(&mut self, path: &str, folder: bool) {
-        let mut parent = self;
-        let mut parts = path.split('/').peekable();
-        while let Some(segment) = parts.next() {
-            parent = parent.children.entry(segment.into()).or_default();
-            parent.folder |= parts.peek().is_some() || folder;
-        }
-    }
-
-    fn rows(&self, prefix: &str, commit: &str, output: &mut Vec<TreeRow>) {
-        let mut entries: Vec<_> = self.children.iter().collect();
-        entries.sort_by_key(|(name, child)| (!child.folder, *name));
-        for (name, child) in entries {
-            let path = format!("{prefix}{name}");
-            let kind = if child.folder { "tree" } else { "blob" };
-            let mut segments = vec![kind, commit];
-            segments.extend(path.split('/'));
-            output.push(TreeRow {
-                kind,
-                label: name.clone(),
-                url: web_url(REPOSITORIES[0], &segments),
-            });
-            if child.folder {
-                child.rows(&format!("{path}/"), commit, output);
-                output.push(TreeRow {
-                    kind: "end",
-                    label: String::new(),
-                    url: String::new(),
-                });
-            }
-        }
-    }
-}
-
-pub struct TreeRow {
-    pub kind: &'static str,
-    pub label: String,
+pub struct TreeBranch {
+    pub number: u64,
+    pub name: String,
+    pub title: String,
+    pub state: &'static str,
     pub url: String,
 }
 
 pub struct Tree {
     pub branch: String,
-    pub sha: String,
-    pub rows: Vec<TreeRow>,
+    pub url: String,
+    pub branches: Vec<TreeBranch>,
 }
 
 #[derive(Deserialize)]
@@ -386,6 +303,27 @@ struct GitPull {
     merged_at: Option<String>,
     draft: bool,
     user: Option<GitAuthor>,
+    head: GitRef,
+}
+
+impl GitPull {
+    fn status(&self) -> &'static str {
+        if self.merged_at.is_some() {
+            "merged"
+        } else if self.state != "open" {
+            "closed"
+        } else if self.draft {
+            "draft"
+        } else {
+            "open"
+        }
+    }
+}
+
+#[derive(Deserialize)]
+struct GitRef {
+    #[serde(rename = "ref")]
+    name: String,
 }
 
 pub struct Activity {

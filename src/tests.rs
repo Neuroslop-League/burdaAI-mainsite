@@ -7,7 +7,7 @@ use axum::{
     Form, Json, Router,
     body::{Body, to_bytes},
     extract::{Path, Query, State},
-    http::{HeaderMap, Request, StatusCode, header},
+    http::{HeaderMap, HeaderValue, Request, StatusCode, header},
     response::{IntoResponse, Response},
     routing::{get, post},
 };
@@ -43,16 +43,6 @@ impl Fixture {
             .route(
                 "/repos/Neuroslop-League/{repo}",
                 get(|| async { Json(json!({"default_branch": "main"})) }),
-            )
-            .route(
-                "/repos/Neuroslop-League/{repo}/commits/main",
-                get(|| async {
-                    Json(json!({"sha": "commit-hash", "commit": {"tree": {"sha": "root-tree"}}}))
-                }),
-            )
-            .route(
-                "/repos/Neuroslop-League/{repo}/git/trees/{sha}",
-                get(mock_tree),
             )
             .route("/repos/Neuroslop-League/{repo}/commits", get(mock_commits))
             .route("/repos/Neuroslop-League/{repo}/pulls", get(mock_pulls))
@@ -200,28 +190,6 @@ async fn mock_user(headers: HeaderMap) -> Json<serde_json::Value> {
     Json(json!({"id": id, "login": login}))
 }
 
-async fn mock_tree(
-    State(unavailable): State<Arc<AtomicBool>>,
-    Path((_, sha)): Path<(String, String)>,
-    Query(query): Query<std::collections::HashMap<String, String>>,
-) -> Response {
-    if unavailable.load(Ordering::Relaxed) {
-        return StatusCode::SERVICE_UNAVAILABLE.into_response();
-    }
-    let response = match (sha.as_str(), query.contains_key("recursive")) {
-        ("root-tree", true) => json!({"truncated": true, "tree": []}),
-        ("root-tree", false) => json!({"truncated": false, "tree": [
-            {"path": "docs", "type": "tree", "sha": "docs-tree"},
-            {"path": "README.md", "type": "blob", "sha": "readme"}
-        ]}),
-        ("docs-tree", false) => json!({"truncated": false, "tree": [
-            {"path": "model & runtime.md", "type": "blob", "sha": "doc"}
-        ]}),
-        _ => panic!("Unexpected Git tree request"),
-    };
-    Json(response).into_response()
-}
-
 async fn mock_commits(
     Path(repo): Path<String>,
     Query(query): Query<std::collections::HashMap<String, String>>,
@@ -248,12 +216,40 @@ async fn mock_commits(
     result
 }
 
-async fn mock_pulls(Path(repo): Path<String>) -> Json<serde_json::Value> {
-    Json(json!([{
+async fn mock_pulls(
+    State(unavailable): State<Arc<AtomicBool>>,
+    Path(repo): Path<String>,
+    Query(query): Query<std::collections::HashMap<String, String>>,
+) -> Response {
+    if unavailable.load(Ordering::Relaxed) {
+        return StatusCode::SERVICE_UNAVAILABLE.into_response();
+    }
+    assert_eq!(query["state"], "all");
+
+    let date = chrono::Utc::now().to_rfc3339();
+    let merged = json!({
         "number": 25, "title": format!("PR from {repo}"), "state": "closed",
-        "created_at": chrono::Utc::now().to_rfc3339(), "merged_at": chrono::Utc::now().to_rfc3339(),
-        "draft": false, "user": {"id": 132206435}
-    }]))
+        "created_at": date, "merged_at": date,
+        "draft": false, "user": {"id": 132206435}, "head": {"ref": "codex/runtime"}
+    });
+    if let Some(base) = query.get("base") {
+        assert_eq!(base, "main");
+        assert_eq!(repo, "burdaAI");
+        if query["page"] == "2" {
+            let open = json!({
+                "number": 24, "title": "Update > architecture", "state": "open",
+                "created_at": date, "draft": false, "user": null, "head": {"ref": "feature/architecture"}
+            });
+            return Json(json!([open])).into_response();
+        }
+        let mut response = Json(json!([merged])).into_response();
+        response.headers_mut().insert(
+            header::LINK,
+            HeaderValue::from_static("<https://api.github.com/example?page=2>; rel=\"next\""),
+        );
+        return response;
+    }
+    Json(json!([merged])).into_response()
 }
 
 fn article_form<'a>(
@@ -498,12 +494,11 @@ async fn public_pages_and_github_integration() {
     );
 
     let tree = fixture.get("/project/tree?lang=en", StatusCode::OK).await;
-    assert!(tree.contains("model &amp; runtime.md") || tree.contains("model &#38; runtime.md"));
-    assert!(
-        tree.contains("/blob/commit-hash/docs/model%20&%20runtime.md")
-            || tree.contains("/blob/commit-hash/docs/model%20&#38;%20runtime.md")
-            || tree.contains("/blob/commit-hash/docs/model%20&amp;%20runtime.md")
-    );
+    assert!(tree.contains("https://github.com/Neuroslop-League/burdaAI/tree/main"));
+    assert!(tree.contains("https://github.com/Neuroslop-League/burdaAI/pull/25"));
+    assert!(tree.contains("https://github.com/Neuroslop-League/burdaAI/pull/24"));
+    assert!(tree.contains("codex/runtime") && tree.contains("feature/architecture"));
+    assert!(tree.contains("data-state=\"merged\"") && tree.contains("data-state=\"open\""));
     let profile = fixture
         .get(&format!("/maintainers/{FOUNDER}?lang=en"), StatusCode::OK)
         .await;
@@ -518,6 +513,6 @@ async fn public_pages_and_github_integration() {
         fixture
             .get("/project/tree?lang=en", StatusCode::OK)
             .await
-            .contains("commit-hash")
+            .contains("feature/architecture")
     );
 }

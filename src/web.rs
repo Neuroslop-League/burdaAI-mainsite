@@ -453,7 +453,7 @@ async fn project_tree(
 ) -> Result<Html<String>, Failure> {
     page(
         locale,
-        locale.tr("Дерево репозитория", "Repository tree"),
+        locale.tr("Дерево PR", "PR tree"),
         Project {
             en: locale.0,
             tree_view: true,

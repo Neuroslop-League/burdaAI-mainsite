@@ -2,25 +2,37 @@
   <h1 id="page-title">{% if en %}The project{% else %}Проект{% endif %}</h1>
   <nav class="subnav" aria-label="{% if en %}Project views{% else %}Представления проекта{% endif %}">
     <a href="/project/map" {% if !tree_view %}aria-current="page"{% endif %}>{% if en %}Component map{% else %}Карта компонентов{% endif %}</a>
-    <a href="/project/tree" {% if tree_view %}aria-current="page"{% endif %}>{% if en %}Repository tree{% else %}Дерево репозитория{% endif %}</a>
+    <a href="/project/tree" {% if tree_view %}aria-current="page"{% endif %}>{% if en %}PR tree{% else %}Дерево PR{% endif %}</a>
   </nav>
   {% if tree_view %}
     {% if let Some(tree) = snapshot.value %}
-      <p class="tree-meta"><code>{{ tree.branch }}</code> · <a href="https://github.com/Neuroslop-League/burdaAI/tree/{{ tree.sha }}"><code>{{ tree.sha|truncate(10) }}</code></a></p>
       <small>{% if snapshot.stale %}{% if en %}GitHub unavailable. Last successful update{% else %}GitHub недоступен. Последнее успешное обновление{% endif %}{% else %}{% if en %}Updated{% else %}Обновлено{% endif %}{% endif %} · {{ snapshot.updated }}</small>
-      <ul class="repo-tree" aria-label="burdaAI">
-        {% for row in tree.rows %}
-          {% match row.kind %}
-          {% when "tree" %}
-            <li><details><summary><span class="folder-label">{{ row.label }}</span></summary><ul>
-              <li><a class="folder-link" href="{{ row.url }}">{% if en %}Open on GitHub ↗{% else %}Открыть на GitHub ↗{% endif %}</a></li>
-          {% when "blob" %}<li><a href="{{ row.url }}">{{ row.label }}</a></li>
-          {% when _ %}</ul></details></li>
-          {% endmatch %}
-        {% endfor %}
-      </ul>
+      <figure class="pr-tree" aria-labelledby="pr-tree-title">
+        <figcaption id="pr-tree-title">
+          <a class="pr-trunk" href="{{ tree.url }}" data-pixel="about">{{ tree.branch }}</a>
+        </figcaption>
+        {% if tree.branches.is_empty() %}
+          <p>{% if en %}There are no pull requests targeting this branch yet.{% else %}В эту ветку пока нет pull request’ов.{% endif %}</p>
+        {% else %}
+          <ol class="pr-branches">
+            {% for branch in tree.branches %}
+            <li class="pr-branch" data-state="{{ branch.state }}">
+              <span class="pr-connector" aria-hidden="true"></span>
+              <a class="pr-card" href="{{ branch.url }}" data-pixel="heading">
+                <span class="pr-meta">
+                  <span>#{{ branch.number }}</span>
+                  <span class="pr-status">{% match branch.state %}{% when "merged" %}{% if en %}Merged{% else %}Влито{% endif %}{% when "open" %}{% if en %}Open{% else %}Открыт{% endif %}{% when "draft" %}{% if en %}Draft{% else %}Черновик{% endif %}{% when _ %}{% if en %}Closed{% else %}Закрыт{% endif %}{% endmatch %}</span>
+                </span>
+                <code>{{ branch.name }}</code>
+                <span class="pr-title">{{ branch.title }}</span>
+              </a>
+            </li>
+            {% endfor %}
+          </ol>
+        {% endif %}
+      </figure>
     {% else %}
-      <p>{% if en %}The repository tree is temporarily unavailable.{% else %}Дерево репозитория временно недоступно.{% endif %}</p>
+      <p>{% if en %}The PR tree is temporarily unavailable.{% else %}Дерево PR временно недоступно.{% endif %}</p>
     {% endif %}
   {% else %}
     <ol class="component-map">

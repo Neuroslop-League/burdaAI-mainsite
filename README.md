@@ -1,6 +1,6 @@
 # burdaAI
 
-Сайт проекта Neuroslop League на Rust, Axum и Askama. Хранит статьи, сессии и состав мейнтейнеров в SQLite. Публичные страницы показывают статьи, вклад мейнтейнеров, дерево исходников и карту компонентов [burdaAI](https://github.com/Neuroslop-League/burdaAI).
+Сайт проекта Neuroslop League на Rust, Axum и Askama. Хранит статьи, сессии и состав мейнтейнеров в SQLite. Публичные страницы показывают статьи, вклад мейнтейнеров, дерево pull request’ов основной ветки и карту компонентов [burdaAI](https://github.com/Neuroslop-League/burdaAI).
 
 ## Локальный запуск
 

@@ -1,0 +1,523 @@
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
+
+use axum::{
+    Form, Json, Router,
+    body::{Body, to_bytes},
+    extract::{Path, Query, State},
+    http::{HeaderMap, Request, StatusCode, header},
+    response::{IntoResponse, Response},
+    routing::{get, post},
+};
+use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+use serde_json::json;
+use sha2::{Digest, Sha256};
+use tower::ServiceExt;
+use url::Url;
+
+use crate::{auth::OAuth, db, github::GitHub, web};
+
+const FOUNDER: &str = "132206435";
+const WRITER: &str = "5678";
+
+struct Fixture {
+    app: Router,
+    state: web::AppState,
+    db_path: std::path::PathBuf,
+    _directory: tempfile::TempDir,
+    fail_api: Arc<AtomicBool>,
+}
+
+impl Fixture {
+    async fn new() -> Self {
+        let fail_api = Arc::new(AtomicBool::new(false));
+        let fake = Router::new()
+            .route("/login/token", post(mock_token))
+            .route("/user", get(mock_user))
+            .route(
+                "/users/Writer",
+                get(|| async { Json(json!({"login": "Writer", "id": 5678})) }),
+            )
+            .route(
+                "/repos/Neuroslop-League/{repo}",
+                get(|| async { Json(json!({"default_branch": "main"})) }),
+            )
+            .route(
+                "/repos/Neuroslop-League/{repo}/commits/main",
+                get(|| async {
+                    Json(json!({"sha": "commit-hash", "commit": {"tree": {"sha": "root-tree"}}}))
+                }),
+            )
+            .route(
+                "/repos/Neuroslop-League/{repo}/git/trees/{sha}",
+                get(mock_tree),
+            )
+            .route("/repos/Neuroslop-League/{repo}/commits", get(mock_commits))
+            .route("/repos/Neuroslop-League/{repo}/pulls", get(mock_pulls))
+            .with_state(fail_api.clone());
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let base: Url = format!("http://{}", listener.local_addr().unwrap())
+            .parse()
+            .unwrap();
+        tokio::spawn(async move { axum::serve(listener, fake).await.unwrap() });
+
+        let dir = tempfile::tempdir().unwrap();
+        let db_path = dir.path().join("test.db");
+        let db = db::open(db_path.clone()).await.unwrap();
+        let mut github = GitHub::new(None).unwrap();
+        github.base = base.clone();
+        let mut oauth = OAuth::new(
+            "example-client".into(),
+            "example-secret".into(),
+            "http://127.0.0.1:3000/auth/github/callback"
+                .parse()
+                .unwrap(),
+        )
+        .unwrap();
+        oauth.authorize_url = base.join("login/authorize").unwrap();
+        oauth.token_url = base.join("login/token").unwrap();
+        oauth.user_url = base.join("user").unwrap();
+        let state = web::AppState::new(db, github, Some(oauth));
+        Self {
+            app: web::app(state.clone()),
+            state,
+            db_path,
+            _directory: dir,
+            fail_api,
+        }
+    }
+
+    async fn request(&self, path: &str, cookie: &str, form: Option<&[(&str, &str)]>) -> Response {
+        let mut request = Request::builder().uri(path).header(header::COOKIE, cookie);
+        let body = if let Some(form) = form {
+            request = request
+                .method("POST")
+                .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded");
+            Body::from(
+                url::form_urlencoded::Serializer::new(String::new())
+                    .extend_pairs(form)
+                    .finish(),
+            )
+        } else {
+            Body::empty()
+        };
+        self.app
+            .clone()
+            .oneshot(request.body(body).unwrap())
+            .await
+            .unwrap()
+    }
+
+    async fn get(&self, path: &str, status: StatusCode) -> String {
+        let response = self.request(path, "", None).await;
+        assert_eq!(response.status(), status);
+        rendered(response).await
+    }
+
+    async fn sign_in(&self, handled_as: &str, status: StatusCode) -> String {
+        let start = self.request("/auth/github", "", None).await;
+        assert_eq!(start.status(), StatusCode::SEE_OTHER);
+        let flow = received_cookie(&start, "burda_oauth");
+        let redirect = Url::parse(start.headers()[header::LOCATION].to_str().unwrap()).unwrap();
+        let parameters: std::collections::HashMap<_, _> =
+            redirect.query_pairs().into_owned().collect();
+        assert_eq!(parameters["code_challenge_method"], "S256");
+        let bad_callback = self
+            .request(
+                "/auth/github/callback?code=test&state=incorrect",
+                &flow,
+                None,
+            )
+            .await;
+        assert_eq!(bad_callback.status(), StatusCode::BAD_REQUEST);
+        let callback = format!(
+            "/auth/github/callback?code={handled_as}.{}&state={}",
+            parameters["code_challenge"], parameters["state"]
+        );
+        let response = self.request(&callback, &flow, None).await;
+        assert_eq!(response.status(), status);
+        let replay = self.request(&callback, &flow, None).await;
+        assert_eq!(replay.status(), StatusCode::BAD_REQUEST);
+        if status == StatusCode::SEE_OTHER {
+            received_cookie(&response, "burda_session")
+        } else {
+            String::new()
+        }
+    }
+
+    async fn csrf(&self, session: &str) -> String {
+        let html = rendered(self.request("/studio", session, None).await).await;
+        html.split_once("name=\"csrf\" value=\"")
+            .unwrap()
+            .1
+            .split('"')
+            .next()
+            .unwrap()
+            .into()
+    }
+}
+
+fn received_cookie(response: &Response, name: &str) -> String {
+    response
+        .headers()
+        .get_all(header::SET_COOKIE)
+        .iter()
+        .find_map(|value| {
+            let cookie = value.to_str().ok()?.split(';').next()?;
+            cookie
+                .starts_with(&format!("{name}="))
+                .then(|| cookie.to_owned())
+        })
+        .unwrap()
+}
+
+async fn rendered(response: Response) -> String {
+    String::from_utf8(
+        to_bytes(response.into_body(), 4 * 1024 * 1024)
+            .await
+            .unwrap()
+            .to_vec(),
+    )
+    .unwrap()
+}
+
+async fn mock_token(Form(values): Form<std::collections::HashMap<String, String>>) -> Response {
+    let (id, expected) = values["code"].split_once('.').unwrap();
+    let actual = URL_SAFE_NO_PAD.encode(Sha256::digest(values["code_verifier"].as_bytes()));
+    assert_eq!(actual, expected);
+    Json(json!({"access_token": id})).into_response()
+}
+
+async fn mock_user(headers: HeaderMap) -> Json<serde_json::Value> {
+    let bearer = headers[header::AUTHORIZATION].to_str().unwrap();
+    let (id, login) = match bearer {
+        "Bearer 132206435" => (132206435, "RUdolf1517"),
+        "Bearer 5678" => (5678, "Writer"),
+        _ => (999, "Outsider"),
+    };
+    Json(json!({"id": id, "login": login}))
+}
+
+async fn mock_tree(
+    State(unavailable): State<Arc<AtomicBool>>,
+    Path((_, sha)): Path<(String, String)>,
+    Query(query): Query<std::collections::HashMap<String, String>>,
+) -> Response {
+    if unavailable.load(Ordering::Relaxed) {
+        return StatusCode::SERVICE_UNAVAILABLE.into_response();
+    }
+    let response = match (sha.as_str(), query.contains_key("recursive")) {
+        ("root-tree", true) => json!({"truncated": true, "tree": []}),
+        ("root-tree", false) => json!({"truncated": false, "tree": [
+            {"path": "docs", "type": "tree", "sha": "docs-tree"},
+            {"path": "README.md", "type": "blob", "sha": "readme"}
+        ]}),
+        ("docs-tree", false) => json!({"truncated": false, "tree": [
+            {"path": "model & runtime.md", "type": "blob", "sha": "doc"}
+        ]}),
+        _ => panic!("Unexpected Git tree request"),
+    };
+    Json(response).into_response()
+}
+
+async fn mock_commits(
+    Path(repo): Path<String>,
+    Query(query): Query<std::collections::HashMap<String, String>>,
+) -> Response {
+    assert_eq!(query["sha"], "main");
+    let page = &query["page"];
+    let entry = json!({
+        "sha": format!("fake-{page}"),
+        "author": {"id": 132206435},
+        "commit": {
+            "message": format!("Commit {page} from {repo}\nMessage body"),
+            "committer": {"date": chrono::Utc::now().to_rfc3339()}
+        }
+    });
+    let mut result = Json(json!([entry])).into_response();
+    if page == "1" {
+        result.headers_mut().insert(
+            header::LINK,
+            "<https://api.github.com/example?page=2>; rel=\"next\""
+                .parse()
+                .unwrap(),
+        );
+    }
+    result
+}
+
+async fn mock_pulls(Path(repo): Path<String>) -> Json<serde_json::Value> {
+    Json(json!([{
+        "number": 25, "title": format!("PR from {repo}"), "state": "closed",
+        "created_at": chrono::Utc::now().to_rfc3339(), "merged_at": chrono::Utc::now().to_rfc3339(),
+        "draft": false, "user": {"id": 132206435}
+    }]))
+}
+
+fn article_form<'a>(
+    csrf: &'a str,
+    (id, revision): (&'a str, &'a str),
+    title: &'a str,
+    body: &'a str,
+    intent: &'a str,
+) -> [(&'static str, &'a str); 7] {
+    [
+        ("csrf", csrf),
+        ("id", id),
+        ("revision", revision),
+        ("title", title),
+        ("body", body),
+        ("language", "en"),
+        ("intent", intent),
+    ]
+}
+
+#[tokio::test]
+async fn editorial_workflow_and_roles() {
+    let fixture = Fixture::new().await;
+    assert!(
+        fixture
+            .get("/articles", StatusCode::OK)
+            .await
+            .contains("Опубликованных статей пока нет.")
+    );
+    fixture.get("/studio/new", StatusCode::FORBIDDEN).await;
+    fixture.sign_in("999", StatusCode::FORBIDDEN).await;
+    let founder_cookie = fixture.sign_in(FOUNDER, StatusCode::SEE_OTHER).await;
+    let founder_csrf = fixture.csrf(&founder_cookie).await;
+    assert_eq!(
+        fixture
+            .request(
+                "/studio/maintainers",
+                &founder_cookie,
+                Some(&[("csrf", "bad"), ("login", "Writer")])
+            )
+            .await
+            .status(),
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        fixture
+            .request(
+                "/studio/maintainers",
+                &founder_cookie,
+                Some(&[("csrf", &founder_csrf), ("login", "Writer")])
+            )
+            .await
+            .status(),
+        StatusCode::SEE_OTHER
+    );
+    assert!(
+        fixture
+            .get("/maintainers", StatusCode::OK)
+            .await
+            .contains("Writer")
+    );
+
+    let writer_cookie = fixture.sign_in(WRITER, StatusCode::SEE_OTHER).await;
+    let writer_csrf = fixture.csrf(&writer_cookie).await;
+    assert_eq!(
+        fixture
+            .request("/studio/maintainers", &writer_cookie, None)
+            .await
+            .status(),
+        StatusCode::FORBIDDEN
+    );
+    let body = "**Weights**\n\n[bad](javascript:alert%281%29)\n<script>alert(1)</script>";
+    let draft = article_form(&writer_csrf, ("0", "0"), "A draft", body, "save");
+    let preview = fixture
+        .request("/studio/preview", &writer_cookie, Some(&draft))
+        .await;
+    assert_eq!(preview.status(), StatusCode::OK);
+    let preview = rendered(preview).await;
+    assert!(preview.contains("<strong>Weights</strong>"));
+    assert!(!preview.contains("<script>alert(1)</script>"));
+    assert!(!preview.contains("href=\"javascript:"));
+    let response = fixture
+        .request("/studio/save", &writer_cookie, Some(&draft))
+        .await;
+    assert_eq!(response.status(), StatusCode::SEE_OTHER);
+    assert_eq!(response.headers()[header::LOCATION], "/studio/articles/1");
+    fixture.get("/articles/1", StatusCode::NOT_FOUND).await;
+    assert_eq!(
+        fixture
+            .request("/studio/articles/1", &founder_cookie, None)
+            .await
+            .status(),
+        StatusCode::NOT_FOUND
+    );
+    let foreign = article_form(&founder_csrf, ("1", "1"), "Overwrite", body, "publish");
+    assert_eq!(
+        fixture
+            .request("/studio/save", &founder_cookie, Some(&foreign))
+            .await
+            .status(),
+        StatusCode::NOT_FOUND
+    );
+
+    let invalid = article_form(&writer_csrf, ("1", "1"), "Original title", " ", "publish");
+    let error = fixture
+        .request("/studio/save", &writer_cookie, Some(&invalid))
+        .await;
+    assert_eq!(error.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    let html = rendered(error).await;
+    assert!(html.contains("Напишите текст перед публикацией") && html.contains("<textarea"));
+    let publish = article_form(
+        &writer_csrf,
+        ("1", "1"),
+        "Published & safe",
+        body,
+        "publish",
+    );
+    assert_eq!(
+        fixture
+            .request("/studio/save", &writer_cookie, Some(&publish))
+            .await
+            .status(),
+        StatusCode::SEE_OTHER
+    );
+    let public = fixture.get("/articles/1", StatusCode::OK).await;
+    assert!(public.contains("<strong>Weights</strong>"));
+    assert!(public.contains("Published &#38; safe") || public.contains("Published &amp; safe"));
+    assert_eq!(
+        fixture
+            .request("/studio/save", &writer_cookie, Some(&publish))
+            .await
+            .status(),
+        StatusCode::CONFLICT
+    );
+
+    let hide = article_form(&writer_csrf, ("1", "2"), "", "", "unpublish");
+    assert_eq!(
+        fixture
+            .request("/studio/save", &writer_cookie, Some(&hide))
+            .await
+            .status(),
+        StatusCode::SEE_OTHER
+    );
+    fixture.get("/articles/1", StatusCode::NOT_FOUND).await;
+    let publish_again = article_form(&writer_csrf, ("1", "3"), "Updated title", body, "publish");
+    assert_eq!(
+        fixture
+            .request("/studio/save", &writer_cookie, Some(&publish_again))
+            .await
+            .status(),
+        StatusCode::SEE_OTHER
+    );
+    let edit_live = article_form(
+        &writer_csrf,
+        ("1", "4"),
+        "Updated title",
+        "**Updated**",
+        "save",
+    );
+    assert_eq!(
+        fixture
+            .request("/studio/save", &writer_cookie, Some(&edit_live))
+            .await
+            .status(),
+        StatusCode::SEE_OTHER
+    );
+    assert!(
+        fixture
+            .get("/articles/1", StatusCode::OK)
+            .await
+            .contains("<strong>Updated</strong>")
+    );
+
+    for (id, status) in [
+        (FOUNDER, StatusCode::FORBIDDEN),
+        (WRITER, StatusCode::SEE_OTHER),
+    ] {
+        let response = fixture
+            .request(
+                &format!("/studio/maintainers/{id}/remove"),
+                &founder_cookie,
+                Some(&[("csrf", &founder_csrf)]),
+            )
+            .await;
+        assert_eq!(response.status(), status);
+    }
+    assert_eq!(
+        fixture
+            .request("/studio/new", &writer_cookie, None)
+            .await
+            .status(),
+        StatusCode::FORBIDDEN
+    );
+    let logout = fixture
+        .request(
+            "/auth/logout",
+            &founder_cookie,
+            Some(&[("csrf", &founder_csrf)]),
+        )
+        .await;
+    assert_eq!(logout.status(), StatusCode::SEE_OTHER);
+    assert_eq!(
+        fixture
+            .request("/studio/new", &founder_cookie, None)
+            .await
+            .status(),
+        StatusCode::FORBIDDEN
+    );
+
+    fixture.state.db.close().await;
+    let reopened = db::open(fixture.db_path.clone()).await.unwrap();
+    let article = db::article(&reopened, 1).await.unwrap().unwrap();
+    assert!(article.published && article.author == "Writer");
+    assert!(
+        !db::maintainer(&reopened, 5678)
+            .await
+            .unwrap()
+            .unwrap()
+            .active()
+    );
+    assert_eq!(db::maintainers(&reopened).await.unwrap().len(), 1);
+}
+
+#[tokio::test]
+async fn public_pages_and_github_integration() {
+    let fixture = Fixture::new().await;
+    let ru = fixture.get("/", StatusCode::OK).await;
+    let en = fixture.get("/?lang=en", StatusCode::OK).await;
+    assert!(ru.contains("Я бурда и ты бурда, получается хуйня."));
+    assert!(en.contains("burda together, burmalda forever."));
+    assert!(
+        fixture
+            .get("/project/map?lang=en", StatusCode::OK)
+            .await
+            .contains("Rust runtime")
+    );
+    assert!(
+        fixture
+            .get("/static/site.js", StatusCode::OK)
+            .await
+            .contains("paintArtwork")
+    );
+
+    let tree = fixture.get("/project/tree?lang=en", StatusCode::OK).await;
+    assert!(tree.contains("model &amp; runtime.md") || tree.contains("model &#38; runtime.md"));
+    assert!(
+        tree.contains("/blob/commit-hash/docs/model%20&%20runtime.md")
+            || tree.contains("/blob/commit-hash/docs/model%20&#38;%20runtime.md")
+            || tree.contains("/blob/commit-hash/docs/model%20&amp;%20runtime.md")
+    );
+    let profile = fixture
+        .get(&format!("/maintainers/{FOUNDER}?lang=en"), StatusCode::OK)
+        .await;
+    for repo in ["burdaAI", "burdaAI-mainsite"] {
+        assert!(profile.contains(&format!("Commit 2 from {repo}")));
+        assert!(profile.contains(&format!("PR from {repo}")));
+    }
+    assert!(profile.contains("Merged"));
+
+    fixture.fail_api.store(true, Ordering::Relaxed);
+    assert!(
+        fixture
+            .get("/project/tree?lang=en", StatusCode::OK)
+            .await
+            .contains("commit-hash")
+    );
+}

@@ -1,0 +1,5 @@
+<article class="site-panel" data-pixel="heading" lang="{{ article.language }}" aria-labelledby="page-title">
+  <h1 id="page-title" class="prose-title">{{ article.title }}</h1>
+  <small><a href="/maintainers/{{ article.author_id }}">{{ article.author }}</a> · {{ article.date }} UTC · {{ article.language|upper }}</small>
+  <div class="markdown">{{ rendered|safe }}</div>
+</article>

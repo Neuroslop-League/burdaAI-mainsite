@@ -1,0 +1,13 @@
+<section class="site-panel" data-pixel="navigation" aria-labelledby="page-title">
+  <h1 id="page-title">{% if en %}Maintainers{% else %}Мейнтейнеры{% endif %}</h1>
+  <ul class="item-list">
+    {% for member in members %}
+    <li class="profile-row">
+      <img class="avatar" src="{{ member.avatar_url }}" alt="" width="48" height="48">
+      <div><a href="/maintainers/{{ member.github_id }}">{{ member.login }}</a>
+        {% if member.founder() %}<small>{% if en %}Founder{% else %}Основатель{% endif %}</small>{% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</section>

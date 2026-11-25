@@ -1,0 +1,33 @@
+<section class="site-panel" data-pixel="navigation" aria-labelledby="page-title">
+  <div class="profile-row">
+    <img class="avatar" src="{{ member.avatar_url }}" alt="" width="64" height="64">
+    <div>
+      <h1 id="page-title" class="prose-title">{{ member.login }}</h1>
+      <a href="https://github.com/{{ member.login }}">GitHub ↗</a>
+      {% if member.founder() %} · {% if en %}Founder{% else %}Основатель{% endif %}{% endif %}
+      {% if !member.active() %} · {% if en %}Former maintainer{% else %}Бывший мейнтейнер{% endif %}{% endif %}
+    </div>
+  </div>
+  <h2>{% if en %}Articles{% else %}Статьи{% endif %}</h2>
+  <ul class="item-list">
+    {% for article in articles %}
+    <li><a href="/articles/{{ article.id }}" lang="{{ article.language }}">{{ article.title }}</a><small>{{ article.date }} UTC · {{ article.language|upper }}</small></li>
+    {% else %}
+    <li>{% if en %}No published articles yet.{% else %}Опубликованных статей пока нет.{% endif %}</li>
+    {% endfor %}
+  </ul>
+  <h2>{% if en %}GitHub activity · last 90 days{% else %}Вклад на GitHub за 90 дней{% endif %}</h2>
+  {% if let Some(items) = activity.value %}
+    <small>{% if activity.stale %}{% if en %}GitHub unavailable. Last successful update{% else %}GitHub недоступен. Последнее успешное обновление{% endif %}{% else %}{% if en %}Updated{% else %}Обновлено{% endif %}{% endif %} · {{ activity.updated }}</small>
+    <ul class="item-list">
+      {% for event in items.iter() %}{% if event.author_id == member.github_id %}
+        <li><a href="{{ event.url }}">{{ event.title }}</a>
+          <small>{{ event.repo }} · {{ event.date }} · {% if event.kind == "commit" %}{% if en %}Commit{% else %}Коммит{% endif %}{% else %}PR · {% match event.state %}{% when "merged" %}{% if en %}Merged{% else %}Слит{% endif %}{% when "open" %}{% if en %}Open{% else %}Открыт{% endif %}{% when "draft" %}{% if en %}Draft{% else %}Черновик{% endif %}{% when _ %}{% if en %}Closed{% else %}Закрыт{% endif %}{% endmatch %}{% endif %}</small>
+        </li>
+      {% endif %}{% endfor %}
+      {% if !has_events %}<li>{% if en %}No activity for this period.{% else %}За этот период активности нет.{% endif %}</li>{% endif %}
+    </ul>
+  {% else %}
+    <p>{% if en %}GitHub activity is temporarily unavailable.{% else %}Данные о вкладе GitHub временно недоступны.{% endif %}</p>
+  {% endif %}
+</section>

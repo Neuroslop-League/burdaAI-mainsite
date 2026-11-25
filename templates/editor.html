@@ -1,0 +1,35 @@
+<section class="site-panel" data-pixel="heading" aria-labelledby="page-title">
+  <a href="/studio">{% if en %}← Studio{% else %}← Редактор{% endif %}</a>
+  <h1 id="page-title">{% if draft.id == 0 %}{% if en %}New article{% else %}Новая статья{% endif %}{% else %}{% if en %}Edit article{% else %}Редактирование{% endif %}{% endif %}</h1>
+  {% if !notice.is_empty() %}<p class="notice" role="alert">{{ notice }}</p>{% endif %}
+  {% if published %}<p>{% if en %}This article is public. Saving updates the public version.{% else %}Статья опубликована. Сохранение обновит публичную версию.{% endif %} <a href="/articles/{{ draft.id }}">{% if en %}View article{% else %}Открыть статью{% endif %}</a></p>{% endif %}
+  <form class="editor-form" method="post" action="/studio/save">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="id" value="{{ draft.id }}">
+    <input type="hidden" name="revision" value="{{ draft.revision }}">
+    <label for="article-title">{% if en %}Title{% else %}Заголовок{% endif %}</label>
+    <input id="article-title" name="title" required maxlength="160" value="{{ draft.title }}">
+    <label for="article-language">{% if en %}Article language{% else %}Язык статьи{% endif %}</label>
+    <select name="language" id="article-language">
+      <option value="ru" {% if draft.language == "ru" %}selected{% endif %}>Русский</option>
+      <option value="en" {% if draft.language == "en" %}selected{% endif %}>English</option>
+    </select>
+    <label for="article-body">Markdown</label>
+    <textarea id="article-body" name="body" rows="15" maxlength="50000">{{ draft.body }}</textarea>
+    <div class="actions">
+      <button class="primary" data-pixel="controls" type="submit" name="intent" value="save">{% if en %}Save{% else %}Сохранить{% endif %}</button>
+      <button type="submit" data-pixel="controls" formaction="/studio/preview" formnovalidate>{% if en %}Preview{% else %}Предпросмотр{% endif %}</button>
+      {% if published %}
+      <button type="submit" data-pixel="controls" name="intent" value="unpublish" formnovalidate>{% if en %}Unpublish{% else %}Снять с публикации{% endif %}</button>
+      {% else %}
+      <button type="submit" data-pixel="controls" name="intent" value="publish">{% if en %}Publish{% else %}Опубликовать{% endif %}</button>
+      {% endif %}
+    </div>
+  </form>
+  {% if let Some(html) = preview %}
+  <section class="preview">
+    <h2>{% if en %}Preview{% else %}Предпросмотр{% endif %}</h2>
+    <div lang="{{ draft.language }}"><h3 class="prose-title">{{ draft.title }}</h3><div class="markdown">{{ html|safe }}</div></div>
+  </section>
+  {% endif %}
+</section>

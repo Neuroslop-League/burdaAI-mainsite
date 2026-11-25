@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="{% if en %}burdaAI is a language model by Neuroslop League for local inference and reproducible training.{% else %}burdaAI — языковая модель Neuroslop League для локального запуска с воспроизводимым обучением.{% endif %}">
+  <title>{{ title }} — burdaAI</title>
+  <link rel="icon" href="/static/assets/favicon.png" type="image/png">
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/preferences.js"></script>
+  <script src="/static/site.js" defer></script>
+</head>
+<body id="top">
+  <canvas class="pixel-field" aria-hidden="true"></canvas>
+  <header data-pixel="navigation">
+    <div class="wrap top">
+      <a class="brand" data-pixel="navigation" href="/"><span class="mark" aria-hidden="true"></span> burdaAI</a>
+      <nav class="main-nav" aria-label="{% if en %}Navigation{% else %}Навигация{% endif %}">
+        <a data-pixel="navigation" href="/articles">{% if en %}Articles{% else %}Статьи{% endif %}</a>
+        <a data-pixel="navigation" href="/maintainers">{% if en %}Maintainers{% else %}Мейнтейнеры{% endif %}</a>
+        <a data-pixel="navigation" href="/project/map">{% if en %}Project{% else %}Проект{% endif %}</a>
+        <a data-pixel="navigation" href="/studio">{% if en %}Studio{% else %}Редактор{% endif %}</a>
+      </nav>
+      <div class="controls">
+        <a class="language" data-pixel="controls" lang="{% if en %}ru{% else %}en{% endif %}" href="?lang={% if en %}ru{% else %}en{% endif %}" aria-label="{% if en %}Русский{% else %}English{% endif %}">{% if en %}RU{% else %}EN{% endif %}</a>
+        <button type="button" data-pixel="controls" id="theme" role="switch" aria-checked="false" aria-label="{% if en %}Dark theme{% else %}Тёмная тема{% endif %}" hidden><span aria-hidden="true">◐</span></button>
+      </div>
+    </div>
+  </header>
+  <main class="wrap">{{ body|safe }}</main>
+  <footer data-pixel="navigation">
+    <div class="wrap foot">
+      <span data-pixel="navigation">burdaAI / Neuroslop League</span>
+      <a data-pixel="navigation" href="https://github.com/Neuroslop-League/burdaAI">GitHub ↗</a>
+      <a data-pixel="navigation" href="#top">{% if en %}Back to top ↑{% else %}К началу ↑{% endif %}</a>
+    </div>
+  </footer>
+</body>
+</html>

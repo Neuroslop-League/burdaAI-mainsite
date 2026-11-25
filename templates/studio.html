@@ -1,0 +1,30 @@
+<section class="site-panel" data-pixel="heading" aria-labelledby="page-title">
+  <h1 id="page-title">{% if en %}Studio{% else %}Редактор{% endif %}</h1>
+  {% if let Some(user) = viewer %}
+    <p>{{ user.login }}</p>
+    <div class="actions">
+      <a class="action primary" data-pixel="controls" href="/studio/new">{% if en %}New article{% else %}Новая статья{% endif %}</a>
+      {% if user.founder() %}<a class="action" data-pixel="controls" href="/studio/maintainers">{% if en %}Manage maintainers{% else %}Управление мейнтейнерами{% endif %}</a>{% endif %}
+      <form method="post" action="/auth/logout">
+        <input type="hidden" name="csrf" value="{{ user.csrf }}">
+        <button type="submit" data-pixel="controls">{% if en %}Sign out{% else %}Выйти{% endif %}</button>
+      </form>
+    </div>
+    <ul class="item-list">
+      {% for article in articles %}
+      <li><a href="/studio/articles/{{ article.id }}" lang="{{ article.language }}">{{ article.title }}</a>
+        <small>{% if article.published %}{% if en %}Published{% else %}Опубликовано{% endif %} · <a href="/articles/{{ article.id }}">{% if en %}View{% else %}Открыть{% endif %}</a>{% else %}{% if en %}Draft{% else %}Черновик{% endif %}{% endif %}</small>
+      </li>
+      {% else %}
+      <li>{% if en %}You have no articles yet.{% else %}У вас пока нет статей.{% endif %}</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>{% if en %}Maintainers sign in with GitHub to write and publish articles.{% else %}Мейнтейнеры входят через GitHub, чтобы писать и публиковать статьи.{% endif %}</p>
+    {% if oauth_ready %}
+    <div class="actions"><a class="action primary" data-pixel="controls" href="/auth/github">{% if en %}Sign in with GitHub{% else %}Войти через GitHub{% endif %}</a></div>
+    {% else %}
+    <p class="notice">{% if en %}GitHub sign-in is disabled until the local OAuth settings are configured.{% else %}Для входа через GitHub нужно настроить локальное OAuth-приложение.{% endif %}</p>
+    {% endif %}
+  {% endif %}
+</section>

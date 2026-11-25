@@ -1,0 +1,29 @@
+[package]
+name = "burdaai-site"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ammonia = "4"
+askama = "0.14"
+axum = { version = "0.8", features = ["form", "query"] }
+axum-extra = { version = "0.10", features = ["cookie"] }
+base64 = "0.22"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+dotenvy = "0.15"
+pulldown-cmark = "0.13"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+serde = { version = "1", features = ["derive"] }
+sha2 = "0.10"
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "sqlite", "macros", "migrate"] }
+subtle = "2"
+time = "0.3"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "sync", "signal"] }
+tower-http = { version = "0.6", features = ["fs"] }
+url = "2"
+uuid = { version = "1", features = ["v4"] }
+
+[dev-dependencies]
+serde_json = "1"
+tempfile = "3"
+tower = { version = "0.5", features = ["util"] }

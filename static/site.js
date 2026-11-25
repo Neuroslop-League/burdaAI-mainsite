@@ -20,56 +20,19 @@ systemTheme.addEventListener('change', syncTheme);
 syncTheme();
 theme.hidden = false;
 
-const language = document.querySelector('#language');
-const translations = Array.from(document.querySelectorAll('[data-en], [data-label-en]'), element => {
-  const attribute = element.hasAttribute('data-label-en') ? 'aria-label' : null;
-  const text = attribute ? null : element.firstChild;
-  return {
-    element,
-    attribute,
-    text,
-    ru: attribute ? element.getAttribute(attribute) : text.data,
-    en: attribute ? element.dataset.labelEn : element.dataset.en,
-  };
-});
-const description = document.querySelector('meta[name="description"]');
-const russianDescription = description.content;
-
-function setLanguage(value) {
-  const english = value === 'en';
-  root.lang = english ? 'en' : 'ru';
-  for (const { element, attribute, text, ru, en } of translations) {
-    if (attribute) element.setAttribute(attribute, english ? en : ru);
-    else text.data = english ? en : ru;
-  }
-  language.querySelector('span').textContent = english ? 'RU' : 'EN';
-  language.lang = english ? 'ru' : 'en';
-  language.setAttribute('aria-label', english ? 'Русский' : 'English');
-  description.content = english
-    ? 'burdaAI is a language model by Neuroslop League for local inference and reproducible training.'
-    : russianDescription;
-}
-
-language.addEventListener('click', () => {
-  setLanguage(root.lang === 'ru' ? 'en' : 'ru');
-  savePreference('burda-language', root.lang);
-});
-let preferredLanguage;
-try { preferredLanguage = localStorage.getItem('burda-language'); } catch {}
-setLanguage(preferredLanguage);
-language.hidden = false;
-
 const filters = document.querySelector('.filters');
-const filterButtons = Array.from(filters.querySelectorAll('button'));
-const cards = document.querySelectorAll('.card');
-for (const button of filterButtons) {
-  button.addEventListener('click', () => {
-    const topic = button.dataset.filter;
-    for (const filter of filterButtons) filter.setAttribute('aria-pressed', String(filter === button));
-    for (const card of cards) card.hidden = topic !== 'all' && card.dataset.topic !== topic;
-  });
+if (filters) {
+  const filterButtons = Array.from(filters.querySelectorAll('button'));
+  const cards = document.querySelectorAll('.project .card');
+  for (const button of filterButtons) {
+    button.addEventListener('click', () => {
+      const topic = button.dataset.filter;
+      for (const filter of filterButtons) filter.setAttribute('aria-pressed', String(filter === button));
+      for (const card of cards) card.hidden = topic !== 'all' && card.dataset.topic !== topic;
+    });
+  }
+  filters.hidden = false;
 }
-filters.hidden = false;
 
 const palette = {
   ink: '#191917', night: '#21183d', dusk: '#30216d', blue: '#3328d4',
@@ -81,6 +44,7 @@ const artwork = new Map();
 
 function registerArtwork(id, background, blocks, motion) {
   const canvas = document.getElementById(id);
+  if (!canvas) return;
   const context = canvas.getContext('2d');
   if (context) artwork.set(canvas, { canvas, context, background, blocks, motion, step: -1, visible: false });
 }

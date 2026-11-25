@@ -480,12 +480,12 @@ async fn public_pages_and_github_integration() {
     let en = fixture.get("/?lang=en", StatusCode::OK).await;
     assert!(ru.contains("Я бурда и ты бурда, получается хуйня."));
     assert!(en.contains("burda together, burmalda forever."));
-    assert!(
-        fixture
-            .get("/project/map?lang=en", StatusCode::OK)
-            .await
-            .contains("Rust runtime")
-    );
+    let map = fixture
+        .get("/project/map?lang=en&node=runtime", StatusCode::OK)
+        .await;
+    assert!(map.contains("Rust runtime"));
+    assert!(map.contains("data-map-active=\"runtime\""));
+    assert!(map.contains("/pull/20") && map.contains("/docs/inference-bundle.md"));
     assert!(
         fixture
             .get("/static/site.js", StatusCode::OK)

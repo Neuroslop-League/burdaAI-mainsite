@@ -3,7 +3,7 @@ use std::sync::Arc;
 use askama::Template;
 use axum::{
     Extension, Form, Router,
-    extract::{DefaultBodyLimit, FromRequestParts, Path, Request, State},
+    extract::{DefaultBodyLimit, FromRequestParts, Path, Query, Request, State},
     http::{HeaderValue, StatusCode, header, request::Parts},
     middleware::{self, Next},
     response::{Html, IntoResponse, Redirect, Response},
@@ -18,6 +18,7 @@ use crate::{
     auth::{self, OAuth, Viewer},
     db::{self, Article, Maintainer},
     github::{Activity, GitHub, Snapshot, Tree},
+    project_map::{Map, Selection},
 };
 
 #[derive(Clone)]
@@ -443,7 +444,6 @@ async fn profile(
 #[template(path = "project.html")]
 struct Project {
     en: bool,
-    tree_view: bool,
     snapshot: Snapshot<Tree>,
 }
 
@@ -456,25 +456,19 @@ async fn project_tree(
         locale.tr("Дерево PR", "PR tree"),
         Project {
             en: locale.0,
-            tree_view: true,
             snapshot: state.github.tree().await,
         },
     )
 }
 
-async fn project_map(locale: Locale) -> Result<Html<String>, Failure> {
+async fn project_map(
+    locale: Locale,
+    Query(selection): Query<Selection>,
+) -> Result<Html<String>, Failure> {
     page(
         locale,
         locale.tr("Карта компонентов", "Component map"),
-        Project {
-            en: locale.0,
-            tree_view: false,
-            snapshot: Snapshot {
-                value: None,
-                updated: String::new(),
-                stale: false,
-            },
-        },
+        Map::new(locale.0, &selection),
     )
 }
 

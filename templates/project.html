@@ -1,10 +1,9 @@
 <section class="site-panel" data-pixel="heading" aria-labelledby="page-title">
   <h1 id="page-title">{% if en %}The project{% else %}Проект{% endif %}</h1>
   <nav class="subnav" aria-label="{% if en %}Project views{% else %}Представления проекта{% endif %}">
-    <a href="/project/map" {% if !tree_view %}aria-current="page"{% endif %}>{% if en %}Component map{% else %}Карта компонентов{% endif %}</a>
-    <a href="/project/tree" {% if tree_view %}aria-current="page"{% endif %}>{% if en %}PR tree{% else %}Дерево PR{% endif %}</a>
+    <a href="/project/map">{% if en %}Component map{% else %}Карта компонентов{% endif %}</a>
+    <a href="/project/tree" aria-current="page">{% if en %}PR tree{% else %}Дерево PR{% endif %}</a>
   </nav>
-  {% if tree_view %}
     {% if let Some(tree) = snapshot.value %}
       <small>{% if snapshot.stale %}{% if en %}GitHub unavailable. Last successful update{% else %}GitHub недоступен. Последнее успешное обновление{% endif %}{% else %}{% if en %}Updated{% else %}Обновлено{% endif %}{% endif %} · {{ snapshot.updated }}</small>
       <figure class="pr-tree" aria-labelledby="pr-tree-title">
@@ -34,13 +33,4 @@
     {% else %}
       <p>{% if en %}The PR tree is temporarily unavailable.{% else %}Дерево PR временно недоступно.{% endif %}</p>
     {% endif %}
-  {% else %}
-    <ol class="component-map">
-      <li data-pixel="model"><a href="https://github.com/Neuroslop-League/burdaAI/blob/main/docs/data.md">{% if en %}Data{% else %}Данные{% endif %}</a><p>{% if en %}Documents are validated, then split into training and evaluation sets.{% else %}Документы проверяются и делятся на выборки для обучения и оценки.{% endif %}</p></li>
-      <li data-pixel="model"><a href="https://github.com/Neuroslop-League/burdaAI/blob/main/docs/tokenizer.md">{% if en %}Tokenizer{% else %}Токенизатор{% endif %}</a><p>{% if en %}The tokenizer turns text into token IDs for the model.{% else %}Токенизатор превращает текст в последовательность идентификаторов токенов.{% endif %}</p></li>
-      <li data-pixel="training"><a href="https://github.com/Neuroslop-League/burdaAI/blob/main/docs/model-spec.md">{% if en %}Model{% else %}Модель{% endif %}</a><p>{% if en %}The decoder predicts the next token from the preceding context.{% else %}Декодер предсказывает следующий токен по предшествующему контексту.{% endif %}</p></li>
-      <li data-pixel="training"><a href="https://github.com/Neuroslop-League/burdaAI/blob/main/docs/training.md">{% if en %}Training{% else %}Обучение{% endif %}</a><p>{% if en %}Training updates model weights from tokenized data and saves checkpoints.{% else %}Обучение обновляет веса на токенизированных данных и сохраняет контрольные точки.{% endif %}</p></li>
-      <li data-pixel="runtime"><a href="https://github.com/Neuroslop-League/burdaAI/blob/main/docs/inference-bundle.md">{% if en %}Rust runtime{% else %}Рантайм на Rust{% endif %}</a><p>{% if en %}Exported weights and tokenizer artifacts form a bundle for local inference.{% else %}Экспортированные веса и артефакты токенизатора образуют пакет для локальной генерации.{% endif %}</p></li>
-    </ol>
-  {% endif %}
 </section>

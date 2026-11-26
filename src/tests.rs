@@ -493,6 +493,7 @@ async fn public_pages_and_github_integration() {
     let en = fixture.get("/?lang=en", StatusCode::OK).await;
     assert!(ru.contains("Я бурда и ты бурда, получается хуйня."));
     assert!(en.contains("burda together, burmalda forever."));
+    assert!(!ru.contains("href=\"/studio\"") && !en.contains("href=\"/studio\""));
     assert!(!ru.contains("Путь запроса") && !en.contains("How a prompt flows"));
     assert!(!ru.contains("data-filter="));
     for node in ["model", "training", "runtime"] {
@@ -588,6 +589,13 @@ async fn account_bookmarks_profile_and_session_boundaries() {
     let html = rendered(reader_page).await;
     assert!(html.contains("Outsider") && html.contains("Reader"));
     assert!(!html.contains("Open studio"));
+    for cookie in ["", reader.as_str()] {
+        let response = fixture.request("/studio", cookie, None).await;
+        assert_eq!(response.status(), StatusCode::SEE_OTHER);
+        assert_eq!(response.headers()[header::LOCATION], "/account");
+    }
+    let studio = fixture.request("/studio", &founder, None).await;
+    assert_eq!(studio.status(), StatusCode::OK);
     assert_eq!(
         fixture.request("/studio/new", &reader, None).await.status(),
         StatusCode::FORBIDDEN,

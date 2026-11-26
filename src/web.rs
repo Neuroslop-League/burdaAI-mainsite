@@ -583,8 +583,7 @@ async fn project_map(
 #[template(path = "studio.html")]
 struct Studio {
     en: bool,
-    viewer: Option<Viewer>,
-    oauth_ready: bool,
+    viewer: Viewer,
     articles: Vec<Article>,
 }
 
@@ -592,12 +591,11 @@ async fn studio(
     State(state): State<AppState>,
     locale: Locale,
     jar: CookieJar,
-) -> Result<Html<String>, Failure> {
-    let viewer = auth::viewer(&state, &jar).await?;
-    let articles = match viewer.as_ref().filter(|viewer| viewer.maintainer()) {
-        Some(viewer) => db::articles(&state.db, Some(viewer.github_id), true).await?,
-        None => Vec::new(),
+) -> Result<Response, Failure> {
+    let Some(viewer) = auth::viewer(&state, &jar).await?.filter(Viewer::maintainer) else {
+        return Ok(Redirect::to("/account").into_response());
     };
+    let articles = db::articles(&state.db, Some(viewer.github_id), true).await?;
     page(
         locale,
         locale.tr("Редактор", "Studio"),
@@ -605,9 +603,9 @@ async fn studio(
             en: locale.0,
             viewer,
             articles,
-            oauth_ready: state.oauth.is_some(),
         },
     )
+    .map(IntoResponse::into_response)
 }
 
 #[derive(Deserialize)]

@@ -331,10 +331,18 @@ struct ErrorPage<'a> {
 #[template(path = "home.html")]
 struct Home {
     en: bool,
+    stages: Vec<ComponentLink>,
 }
 
 async fn home(locale: Locale) -> Result<Html<String>, Failure> {
-    page(locale, "Neuroslop League", Home { en: locale.0 })
+    page(
+        locale,
+        "Neuroslop League",
+        Home {
+            en: locale.0,
+            stages: component_links(&["tokenizer", "model", "runtime"], locale.0),
+        },
+    )
 }
 
 #[derive(Template)]

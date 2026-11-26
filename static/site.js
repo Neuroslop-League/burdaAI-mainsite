@@ -20,20 +20,6 @@ systemTheme.addEventListener('change', syncTheme);
 syncTheme();
 theme.hidden = false;
 
-const filters = document.querySelector('.filters');
-if (filters) {
-  const filterButtons = Array.from(filters.querySelectorAll('button'));
-  const cards = document.querySelectorAll('.project .card');
-  for (const button of filterButtons) {
-    button.addEventListener('click', () => {
-      const topic = button.dataset.filter;
-      for (const filter of filterButtons) filter.setAttribute('aria-pressed', String(filter === button));
-      for (const card of cards) card.hidden = topic !== 'all' && card.dataset.topic !== topic;
-    });
-  }
-  filters.hidden = false;
-}
-
 const palette = {
   ink: '#191917', night: '#21183d', dusk: '#30216d', blue: '#3328d4',
   violet: '#b8a5f9', purple: '#785fde', lime: '#d7fa3e', orange: '#ff733e',
@@ -46,18 +32,20 @@ function registerArtwork(id, background, blocks, motion) {
   const canvas = document.getElementById(id);
   if (!canvas) return;
   const context = canvas.getContext('2d');
-  if (context) artwork.set(canvas, { canvas, context, background, blocks, motion, step: -1, visible: false });
+  const card = canvas.closest('.card');
+  if (context) artwork.set(canvas, { canvas, context, background, blocks, motion, card, step: -1, visible: false });
 }
 
 function paintArtwork(scene, step) {
-  const { canvas, context, background, blocks, motion } = scene;
+  const { canvas, context, background, blocks, motion, card } = scene;
   if (background) {
     context.fillStyle = palette[background];
     context.fillRect(0, 0, canvas.width, canvas.height);
   } else {
     context.clearRect(0, 0, canvas.width, canvas.height);
   }
-  for (const [color, x, y, width = 1, height = 1] of blocks.concat(motion(step))) {
+  const engaged = card?.matches(':hover, :focus-within');
+  for (const [color, x, y, width = 1, height = 1] of blocks.concat(motion(step, engaged))) {
     context.fillStyle = palette[color] ?? color;
     context.fillRect(x, y, width, height);
   }
@@ -99,10 +87,12 @@ registerArtwork('model', 'violet', [
   ['ink', 12, 6, 5, 1], ['ink', 16, 6, 1, 6], ['ink', 16, 11, 6, 1],
   ['purple', 21, 8, 7, 7], ['ink', 22, 7, 7, 7], ['orange', 23, 8, 5, 5], ['lime', 24, 9, 3, 3],
   ['blue', 27, 2, 4, 3], ['cream', 2, 13, 3, 2], ['purple', 33, 11, 2, 2],
-], step => {
+], (step, engaged) => {
   const route = [[12, 6], [13, 6], [14, 6], [15, 6], [16, 6], [16, 7], [16, 8],
     [16, 9], [16, 10], [16, 11], [17, 11], [18, 11], [19, 11], [20, 11], [21, 11]];
-  return [['lime', ...route[step % route.length]]];
+  const head = step % route.length;
+  const trail = engaged ? route.slice(Math.max(0, head - 3), head) : [];
+  return [...trail.map(point => ['violet', ...point]), ['lime', ...route[head]]];
 });
 
 registerArtwork('training', 'lime', [
@@ -110,10 +100,11 @@ registerArtwork('training', 'lime', [
   ['violet', 8, 10, 2, 1], ['violet', 10, 9, 3, 1], ['violet', 13, 8, 3, 1],
   ['violet', 16, 9, 3, 1], ['violet', 19, 7, 3, 1], ['violet', 22, 6, 3, 1],
   ['orange', 25, 5, 2, 2], ['blue', 32, 4, 2, 2], ['cream', 2, 11, 2, 2],
-], step => {
+], (step, engaged) => {
   const chart = [10, 10, 9, 9, 9, 8, 8, 8, 9, 9, 9, 7, 7, 7, 6, 6, 6];
   const column = step % chart.length;
-  return [['cream', 8 + column, chart[column]]];
+  const history = engaged ? chart.slice(0, column) : [];
+  return [...history.map((y, x) => ['lime', 8 + x, y]), ['cream', 8 + column, chart[column]]];
 });
 
 registerArtwork('runtime', 'orange', [
@@ -122,8 +113,12 @@ registerArtwork('runtime', 'orange', [
   ['cream', 9, 7, 2, 1], ['cream', 11, 8, 2, 1], ['cream', 13, 9, 2, 1],
   ['cream', 11, 10, 2, 1], ['cream', 9, 11, 2, 1], ['lime', 17, 11, 6, 1],
   ['violet', 31, 10, 3, 2], ['ink', 2, 4, 2, 2],
-], step => {
+], (step, engaged) => {
   const cursor = step % 18;
+  if (engaged) {
+    const length = cursor % 7;
+    return [['blue', 17, 11, 7], ['lime', 17, 11, length + 1], ['cream', 17 + length, 11]];
+  }
   return cursor < 12
     ? [['blue', 17, 11, 6], ['lime', 17, 11, cursor % 6 + 1], ['cream', 18 + cursor % 6, 11]]
     : [];

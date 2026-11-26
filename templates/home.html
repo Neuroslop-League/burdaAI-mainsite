@@ -7,8 +7,8 @@
         <p class="home-description">{% if en %}A language model built to run locally.{% else %}Языковая модель для локального запуска.{% endif %}</p>
         <p class="slogan" data-pixel="slogan">{% if en %}burda together, burmalda forever.{% else %}Я бурда и ты бурда, получается хуйня.{% endif %}</p>
         <div class="home-hero-actions">
-          <a class="cta home-primary" data-pixel="controls" href="/project/map">{% if en %}Explore the project{% else %}Изучить проект{% endif %} <span aria-hidden="true">↗</span></a>
-          <a class="cta home-secondary" data-pixel="controls" href="/project/tree">{% if en %}PR tree{% else %}Дерево PR{% endif %} <span aria-hidden="true">↗</span></a>
+          <a class="cta home-primary" data-pixel="controls" href="/project/map{% if en %}?lang=en{% endif %}">{% if en %}Project map{% else %}Карта проекта{% endif %}<span class="home-map-icon" aria-hidden="true"></span></a>
+          <a class="cta home-secondary" data-pixel="controls" href="/project/tree{% if en %}?lang=en{% endif %}">{% if en %}PR tree{% else %}Дерево PR{% endif %}<span class="home-tree-icon" aria-hidden="true"></span></a>
         </div>
       </div>
       <figure class="hero-art home-scene" aria-hidden="true">
@@ -16,6 +16,20 @@
         <canvas id="home-effects" width="192" height="128"></canvas>
         <i class="scene-corner"></i><i class="scene-corner"></i><i class="scene-corner"></i><i class="scene-corner"></i>
       </figure>
+    </section>
+    <section class="home-flow" data-pixel="navigation" aria-labelledby="home-flow-title">
+      <h2 id="home-flow-title">{% if en %}How a prompt flows{% else %}Путь запроса{% endif %}</h2>
+      <ol class="home-flow-stages">
+        {% for stage in stages %}
+        <li data-stage="{{ stage.id }}">
+          <a class="brain-control home-flow-node" href="/project/map?node={{ stage.id }}{% if en %}&amp;lang=en{% endif %}">
+            <span class="brain-mark" aria-hidden="true"></span>
+            <span>{{ stage.title }}</span>
+            <span class="brain-arrow" aria-hidden="true">→</span>
+          </a>
+        </li>
+        {% endfor %}
+      </ol>
     </section>
     <dl class="home-specs" aria-label="{% if en %}Model specifications{% else %}Характеристики модели{% endif %}">
       <div data-pixel="model"><dt>{% if en %}Transformer layers{% else %}Слоёв Transformer{% endif %}</dt><dd>20</dd></div>
@@ -26,12 +40,6 @@
     <section class="project" id="project" aria-labelledby="project-title">
       <div class="section-head" data-pixel="heading">
         <h2 id="project-title" data-pixel="heading">{% if en %}The project{% else %}О проекте{% endif %}</h2>
-        <div class="filters" role="group" aria-label="{% if en %}Project topics{% else %}Разделы проекта{% endif %}" hidden>
-          <button type="button" data-pixel="controls" data-filter="all" aria-pressed="true">{% if en %}All{% else %}Все{% endif %}</button>
-          <button type="button" data-pixel="controls" data-filter="model" aria-pressed="false">{% if en %}Model{% else %}Модель{% endif %}</button>
-          <button type="button" data-pixel="controls" data-filter="training" aria-pressed="false">{% if en %}Training{% else %}Обучение{% endif %}</button>
-          <button type="button" data-pixel="controls" data-filter="runtime" aria-pressed="false">{% if en %}Runtime{% else %}Запуск{% endif %}</button>
-        </div>
       </div>
       <div class="cards">
         <article class="card" data-topic="model" data-pixel="model">
@@ -39,7 +47,7 @@
           <div class="card-body">
             <h3 data-pixel="topic">{% if en %}Architecture{% else %}Архитектура{% endif %}</h3>
             <p data-pixel="topic">{% if en %}Decoder-only Transformer with 20 layers, grouped-query attention, and a 4,096-token context window.{% else %}Decoder-only Transformer с 20 слоями, групповым вниманием GQA и контекстом 4096 токенов.{% endif %}</p>
-            <a data-pixel="controls" href="https://github.com/Neuroslop-League/burdaAI/blob/main/docs/model-spec.md">{% if en %}Specification ↗{% else %}Спецификация ↗{% endif %}</a>
+            <a class="brain-control home-card-link" href="/project/map?node=model{% if en %}&amp;lang=en{% endif %}">{% if en %}Explore the model{% else %}Модель на карте{% endif %}<span class="brain-arrow" aria-hidden="true">→</span></a>
           </div>
         </article>
         <article class="card" data-topic="training" data-pixel="training">
@@ -47,7 +55,7 @@
           <div class="card-body">
             <h3 data-pixel="topic">{% if en %}Training{% else %}Обучение{% endif %}</h3>
             <p data-pixel="topic">{% if en %}The project documents the data, tokenizer, and training configuration so runs can be reproduced.{% else %}Проект документирует данные, токенизатор и конфигурацию обучения, чтобы прогоны можно было повторить.{% endif %}</p>
-            <a data-pixel="controls" href="https://github.com/Neuroslop-League/burdaAI/blob/main/docs/training.md">{% if en %}Training docs ↗{% else %}Документация ↗{% endif %}</a>
+            <a class="brain-control home-card-link" href="/project/map?node=training{% if en %}&amp;lang=en{% endif %}">{% if en %}Explore training{% else %}Обучение на карте{% endif %}<span class="brain-arrow" aria-hidden="true">→</span></a>
           </div>
         </article>
         <article class="card" data-topic="runtime" data-pixel="runtime">
@@ -55,7 +63,7 @@
           <div class="card-body">
             <h3 data-pixel="topic">{% if en %}Local inference{% else %}Локальный запуск{% endif %}</h3>
             <p data-pixel="topic">{% if en %}The Rust runtime targets local inference on modest hardware, with quantized weights and work split between CPU and GPU.{% else %}Рантайм на Rust рассчитан на генерацию текста на скромном железе с квантованными весами и распределением работы между CPU и GPU.{% endif %}</p>
-            <a data-pixel="controls" href="https://github.com/Neuroslop-League/burdaAI/blob/main/docs/stack.md">{% if en %}Technology stack ↗{% else %}Стек проекта ↗{% endif %}</a>
+            <a class="brain-control home-card-link" href="/project/map?node=runtime{% if en %}&amp;lang=en{% endif %}">{% if en %}Explore Rust runtime{% else %}Рантайм на карте{% endif %}<span class="brain-arrow" aria-hidden="true">→</span></a>
           </div>
         </article>
       </div>

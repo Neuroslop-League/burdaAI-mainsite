@@ -54,6 +54,28 @@ pub async fn maintainer(db: &SqlitePool, id: i64) -> Result<Option<Maintainer>, 
 }
 
 #[derive(FromRow)]
+pub struct MaintainerArticle {
+    pub author_id: i64,
+    pub id: i64,
+    pub title: String,
+    pub language: String,
+}
+
+pub async fn maintainer_articles(db: &SqlitePool) -> Result<Vec<MaintainerArticle>, sqlx::Error> {
+    sqlx::query_as(
+        "SELECT a.author_id, a.id, a.title, a.language
+         FROM maintainers m JOIN articles a ON a.id = (
+             SELECT id FROM articles
+             WHERE author_id = m.github_id AND published_at IS NOT NULL
+             ORDER BY published_at DESC, id DESC LIMIT 1
+         )
+         WHERE m.role != 'inactive'",
+    )
+    .fetch_all(db)
+    .await
+}
+
+#[derive(FromRow)]
 pub struct Article {
     pub id: i64,
     pub author_id: i64,

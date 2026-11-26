@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use askama::Template;
 use axum::{
@@ -18,7 +18,7 @@ use crate::{
     auth::{self, OAuth, Viewer},
     db::{self, Article, Maintainer},
     github::{Activity, GitHub, Snapshot, Tree},
-    project_map::{Map, Selection},
+    project_map::{ComponentLink, Map, Selection, component_links},
 };
 
 #[derive(Clone)]
@@ -384,23 +384,106 @@ async fn article(
     )
 }
 
+const PROJECT_FOUNDER_ID: i64 = 132206435;
+const FOUNDER_WORK: &str =
+    "https://github.com/Neuroslop-League/burdaAI/commit/95924200951f29291487f6cd977800fb21a169f4";
+
 #[derive(Template)]
 #[template(path = "maintainers.html")]
 struct Maintainers {
     en: bool,
-    members: Vec<Maintainer>,
+    cards: Vec<MaintainerCard>,
+}
+
+struct MaintainerCard {
+    member: Maintainer,
+    zones: Vec<ComponentLink>,
+    highlight: Option<MaintainerHighlight>,
+}
+
+struct MaintainerHighlight {
+    label: &'static str,
+    title: String,
+    url: String,
+    language: Option<String>,
+    external: bool,
 }
 
 async fn maintainer_list(
     State(state): State<AppState>,
     locale: Locale,
 ) -> Result<Html<String>, Failure> {
+    let (members, articles) = tokio::try_join!(
+        db::maintainers(&state.db),
+        db::maintainer_articles(&state.db)
+    )?;
+    let mut articles: HashMap<_, _> = articles
+        .into_iter()
+        .map(|article| (article.author_id, article))
+        .collect();
+    let activity = if members
+        .iter()
+        .any(|member| !articles.contains_key(&member.github_id))
+    {
+        state.github.activity().await.value
+    } else {
+        None
+    };
+    let cards = members
+        .into_iter()
+        .map(|member| {
+            let zones = match member.github_id {
+                PROJECT_FOUNDER_ID => component_links(&["runtime", "tokenizer", "model"], locale.0),
+                _ => Vec::new(),
+            };
+            let highlight = articles
+                .remove(&member.github_id)
+                .map(|article| MaintainerHighlight {
+                    label: locale.tr("Последняя статья", "Latest article"),
+                    title: article.title,
+                    url: format!("/articles/{}", article.id),
+                    language: Some(article.language),
+                    external: false,
+                })
+                .or_else(|| {
+                    let event = activity.as_ref()?.iter().find(|event| {
+                        event.author_id == member.github_id && !event.title.is_empty()
+                    })?;
+                    Some(MaintainerHighlight {
+                        label: locale.tr("Недавний вклад", "Recent contribution"),
+                        title: event.title.clone(),
+                        url: event.url.clone(),
+                        language: None,
+                        external: true,
+                    })
+                })
+                .or_else(|| {
+                    (member.github_id == PROJECT_FOUNDER_ID).then(|| MaintainerHighlight {
+                        label: locale.tr("Из проекта", "From the project"),
+                        title: locale
+                            .tr(
+                                "Гибридный запуск burdaAI с Q4 GGUF",
+                                "Hybrid burdaAI inference with Q4 GGUF",
+                            )
+                            .into(),
+                        url: FOUNDER_WORK.into(),
+                        language: None,
+                        external: true,
+                    })
+                });
+            MaintainerCard {
+                member,
+                zones,
+                highlight,
+            }
+        })
+        .collect();
     page(
         locale,
         locale.tr("Мейнтейнеры", "Maintainers"),
         Maintainers {
             en: locale.0,
-            members: db::maintainers(&state.db).await?,
+            cards,
         },
     )
 }

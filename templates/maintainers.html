@@ -1,13 +1,40 @@
-<section class="site-panel" data-pixel="navigation" aria-labelledby="page-title">
+<section class="site-panel maintainers-panel" data-pixel="navigation" aria-labelledby="page-title">
   <h1 id="page-title">{% if en %}Maintainers{% else %}Мейнтейнеры{% endif %}</h1>
-  <ul class="item-list list-gallery">
-    {% for member in members %}
-    <li class="profile-row">
-      <img class="avatar" src="{{ member.avatar_url }}" alt="" width="48" height="48">
-      <div><a href="/maintainers/{{ member.github_id }}">{{ member.login }}</a>
-        {% if member.founder() %}<small>{% if en %}Founder{% else %}Основатель{% endif %}</small>{% endif %}
+  {% if cards.is_empty() %}
+  <p>{% if en %}There are no active maintainers listed yet.{% else %}Список активных мейнтейнеров пока пуст.{% endif %}</p>
+  {% else %}
+  <ul class="maintainer-grid">
+    {% for card in cards %}
+    <li class="maintainer-card{% if card.member.founder() %} maintainer-card--founder{% endif %}" data-pixel="heading">
+      <div class="maintainer-identity">
+        <img class="avatar maintainer-avatar" src="{{ card.member.avatar_url }}" alt="" width="128" height="128">
+        <div>
+          <h2>{{ card.member.login }}</h2>
+          <span class="maintainer-role">{% if card.member.founder() %}{% if en %}Founder{% else %}Основатель{% endif %}{% else %}{% if en %}Maintainer{% else %}Мейнтейнер{% endif %}{% endif %}</span>
+        </div>
+      </div>
+      <div class="maintainer-details">
+        {% if !card.zones.is_empty() %}
+        <h3>{% if en %}Project areas{% else %}Зоны работы{% endif %}</h3>
+        <ul class="maintainer-zones">
+          {% for zone in card.zones %}
+          <li><a class="brain-control maintainer-zone" data-zone="{{ zone.id }}" href="/project/map?node={{ zone.id }}{% if en %}&amp;lang=en{% endif %}"><span class="brain-mark" aria-hidden="true"></span>{{ zone.title }}</a></li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+        {% if let Some(work) = card.highlight %}
+        <div class="maintainer-highlight">
+          <h3>{{ work.label }}</h3>
+          <a class="brain-control maintainer-work" href="{{ work.url }}"><span{% if let Some(language) = work.language %} lang="{{ language }}"{% endif %}>{{ work.title }}</span><span class="brain-arrow" aria-hidden="true">{% if work.external %}↗{% else %}→{% endif %}</span></a>
+        </div>
+        {% endif %}
+        <div class="maintainer-actions">
+          <a class="brain-control brain-doc" href="/maintainers/{{ card.member.github_id }}{% if en %}?lang=en{% endif %}"><span class="brain-mark" aria-hidden="true"></span>{% if en %}Project contributions{% else %}Вклад в проект{% endif %}<span class="brain-arrow" aria-hidden="true">→</span></a>
+          <a class="brain-control" href="https://github.com/{{ card.member.login }}">GitHub <span class="brain-arrow" aria-hidden="true">↗</span></a>
+        </div>
       </div>
     </li>
     {% endfor %}
   </ul>
+  {% endif %}
 </section>

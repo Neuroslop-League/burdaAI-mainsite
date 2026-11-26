@@ -509,6 +509,31 @@ async fn public_pages_and_github_integration() {
     }
     assert!(profile.contains("Merged"));
 
+    let directory = fixture.get("/maintainers?lang=en", StatusCode::OK).await;
+    assert!(directory.contains("maintainer-card--founder"));
+    for zone in ["runtime", "tokenizer", "model"] {
+        assert!(directory.contains(&format!("/project/map?node={zone}&amp;lang=en")));
+    }
+    assert!(directory.contains("Recent contribution"));
+    assert!(directory.contains("/pull/25") || directory.contains("/commit/fake-"));
+
+    sqlx::query(
+        "INSERT INTO articles (author_id, title, body, language, published_at) VALUES
+         (?, 'Older article', '', 'en', '2026-01-01'),
+         (?, 'Latest public article', '', 'en', '2026-01-02'),
+         (?, 'Private draft', '', 'en', NULL)",
+    )
+    .bind(FOUNDER)
+    .bind(FOUNDER)
+    .bind(FOUNDER)
+    .execute(&fixture.state.db)
+    .await
+    .unwrap();
+    let directory = fixture.get("/maintainers", StatusCode::OK).await;
+    assert!(directory.contains("Последняя статья"));
+    assert!(directory.contains("Latest public article"));
+    assert!(!directory.contains("Older article") && !directory.contains("Private draft"));
+
     fixture.fail_api.store(true, Ordering::Relaxed);
     assert!(
         fixture

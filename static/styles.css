@@ -1297,3 +1297,134 @@ body:has(.home-page) :is(header, footer) { background: light-dark(#f4eafb, #1d19
   .trace-panel:not([hidden]) { animation: brain-link-in 240ms steps(6, end) both; }
   .trace-tokens li { animation: brain-link-in 280ms var(--token-delay) steps(6, end) both; }
 }
+
+.maintainers-panel { min-height: auto; }
+.maintainer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 25rem), 1fr));
+  gap: clamp(14px, 2vw, 30px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.maintainer-card {
+  --card-signal: light-dark(#6e49a5, #c3acf9);
+  --card-pixel: 8px;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  align-content: start;
+  gap: clamp(16px, 2.2vw, 34px);
+  min-width: 0;
+  padding: clamp(14px, 2.5vw, 40px);
+  border: 2px solid var(--line);
+  background-color: var(--paper);
+  box-shadow: 4px 4px var(--card-signal);
+  font: var(--body-size)/1.5 Arial, sans-serif;
+}
+.maintainer-card--founder { grid-column: 1 / -1; }
+.maintainer-card:hover, .maintainer-card:focus-within { border-color: var(--card-signal); }
+.maintainer-identity {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(12px, 2vw, 26px);
+}
+.maintainer-card .maintainer-avatar {
+  width: clamp(72px, 11vw, 128px);
+  height: clamp(72px, 11vw, 128px);
+  object-fit: cover;
+  box-shadow: 4px 4px var(--card-signal);
+}
+.maintainer-card h2 {
+  margin: 0 0 8px;
+  font: clamp(11px, 1.3vw, 25px)/1.55 var(--pixel);
+  overflow-wrap: anywhere;
+}
+.maintainer-role {
+  display: inline-block;
+  padding: 3px 8px;
+  border: 1px solid var(--card-signal);
+  background: light-dark(#eee0fc, #392a51);
+  font-size: var(--ui-size);
+  font-weight: 700;
+}
+.maintainer-details {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+}
+.maintainer-details h3 { margin: 0; font: 700 var(--ui-size)/1.4 Arial, sans-serif; }
+.maintainer-zones, .maintainer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.maintainer-zones { margin: 0; padding: 0; list-style: none; }
+.maintainer-actions { margin-top: 6px; }
+.maintainer-zone[data-zone="tokenizer"] {
+  --brain-signal: light-dark(#2f6956, #86e2aa);
+  --brain-fill: light-dark(#e0f3e8, #1e3c32);
+  --brain-ink: light-dark(#1b4836, #e3faed);
+}
+.maintainer-zone[data-zone="runtime"] {
+  --brain-signal: light-dark(#925017, #ffb66c);
+  --brain-fill: light-dark(#faecda, #422d22);
+  --brain-ink: light-dark(#643409, #fff3e5);
+}
+.maintainer-zone:is(:hover, :focus-visible) {
+  background: color-mix(in srgb, var(--brain-fill) 82%, var(--brain-signal));
+}
+.maintainer-highlight {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+.maintainer-work { justify-content: start; text-align: left; overflow-wrap: anywhere; }
+.maintainer-work span:first-child { min-width: 0; }
+
+@media (min-width: 880px) {
+  .maintainer-card--founder {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+    align-items: center;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .maintainer-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: calc(var(--card-pixel) / 2);
+    background: repeating-linear-gradient(90deg, var(--card-signal) 0 8px, transparent 8px 12px);
+    pointer-events: none;
+  }
+  .maintainer-card.pixel-entered::before { animation: maintainer-frame 420ms steps(18, end) both; }
+  .maintainer-card:is(:hover, :focus-within)::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: var(--card-pixel);
+    height: var(--card-pixel);
+    background: var(--card-signal);
+    pointer-events: none;
+    animation: maintainer-pulse 760ms steps(10, end) both;
+  }
+}
+@keyframes maintainer-frame {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0); }
+}
+@keyframes maintainer-pulse {
+  0% { top: 0; left: 0; }
+  30% { top: 0; left: calc(100% - var(--card-pixel)); }
+  50% { top: calc(100% - var(--card-pixel)); left: calc(100% - var(--card-pixel)); }
+  80% { top: calc(100% - var(--card-pixel)); left: 0; }
+  99% { top: 0; left: 0; opacity: 1; }
+  100% { opacity: 0; }
+}

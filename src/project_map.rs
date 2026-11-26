@@ -112,6 +112,22 @@ pub struct ComponentLink {
     pub title: &'static str,
 }
 
+impl ComponentLink {
+    fn from_definition(node: &Definition, en: bool) -> Self {
+        Self {
+            id: node.id,
+            title: if en { node.title.1 } else { node.title.0 },
+        }
+    }
+}
+
+pub fn component_links(ids: &[&str], en: bool) -> Vec<ComponentLink> {
+    ids.iter()
+        .filter_map(|id| COMPONENTS.iter().find(|node| node.id == *id))
+        .map(|node| ComponentLink::from_definition(node, en))
+        .collect()
+}
+
 pub struct Component {
     pub node: ComponentLink,
     pub label: &'static str,
@@ -138,10 +154,7 @@ impl Map {
             .iter()
             .find(|node| Some(node.id) == selection.node.as_deref())
             .map_or("training", |node| node.id);
-        let link = |node: &Definition| ComponentLink {
-            id: node.id,
-            title: title(node.title),
-        };
+        let link = |node: &Definition| ComponentLink::from_definition(node, en);
         let components = COMPONENTS
             .iter()
             .map(|node| {

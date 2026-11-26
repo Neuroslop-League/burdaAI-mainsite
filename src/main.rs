@@ -2,6 +2,7 @@ mod auth;
 mod db;
 mod github;
 mod project_map;
+mod prompt_trace;
 mod web;
 
 use std::{env, error::Error, net::SocketAddr, path::PathBuf};

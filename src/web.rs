@@ -47,6 +47,10 @@ pub fn app(state: AppState) -> Router {
         .route("/maintainers/{id}", get(profile))
         .route("/project", get(|| async { Redirect::to("/project/map") }))
         .route("/project/map", get(project_map))
+        .route(
+            "/project/map/tokenize",
+            post(crate::prompt_trace::tokenize).layer(DefaultBodyLimit::max(6 * 1024)),
+        )
         .route("/project/tree", get(project_tree))
         .route("/studio", get(studio))
         .route("/studio/new", get(new_article))

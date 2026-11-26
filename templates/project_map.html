@@ -4,6 +4,7 @@
     <a class="brain-control brain-tab" href="/project/map" aria-current="page"><span class="brain-mark" aria-hidden="true"></span>{% if en %}Component map{% else %}Карта компонентов{% endif %}</a>
     <a class="brain-control brain-tab brain-pr" href="/project/tree"><span class="brain-mark" aria-hidden="true"></span>{% if en %}PR tree{% else %}Дерево PR{% endif %}</a>
   </nav>
+  <a class="brain-control brain-jump" href="#prompt-trace" id="prompt-trace-link" hidden><span>{% if en %}Trace a prompt{% else %}Разобрать запрос{% endif %}</span><span class="brain-arrow" aria-hidden="true">↓</span></a>
   <p class="map-instruction">{% if en %}Select a component to see its connections and documentation.{% else %}Выберите компонент, чтобы увидеть его связи и документацию.{% endif %}</p>
 
   <div class="project-map" data-map-active="{{ active }}">
@@ -31,6 +32,8 @@
       </ul>
       <a class="brain-control brain-jump brain-inspect" href="#brain-details"><span>{% if en %}Component details{% else %}Подробности о компоненте{% endif %}</span><span class="brain-arrow" aria-hidden="true">↓</span></a>
     </div>
+
+    {% include "prompt_trace.html" %}
 
     <div class="map-details" id="brain-details" tabindex="-1">
       {% for component in components %}
@@ -61,3 +64,4 @@
   </div>
 </section>
 <script src="/static/project-map.js" defer></script>
+<script src="/static/prompt-trace.js" defer></script>

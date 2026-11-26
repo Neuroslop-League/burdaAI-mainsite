@@ -95,6 +95,9 @@
       document.getElementById(`detail-${id}`).focus({ preventScroll: true });
     }
   });
+  map.addEventListener('prompt-stage', ({ detail: id }) => {
+    if (!reduced.matches) activation = { id, start: performance.now() };
+  });
   addEventListener('popstate', () => {
     const node = new URL(location.href).searchParams.get('node');
     select(nodes.has(node) ? node : initial, false);

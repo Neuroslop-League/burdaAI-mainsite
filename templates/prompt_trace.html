@@ -1,0 +1,39 @@
+<section class="prompt-trace" id="prompt-trace" aria-labelledby="prompt-trace-title" data-stage="tokenizer" hidden>
+  <div class="trace-heading">
+    <h2 id="prompt-trace-title" tabindex="-1">{% if en %}Trace a prompt{% else %}Разбор запроса{% endif %}</h2>
+    <a class="brain-control brain-jump" href="#component-nodes">{% if en %}View on the map{% else %}Посмотреть на карте{% endif %}<span class="brain-arrow" aria-hidden="true">↑</span></a>
+  </div>
+  <p>{% if en %}Try the burdaAI tokenizer on your text, then walk through one generation step in demo mode.{% else %}Попробуйте токенизатор burdaAI на своём тексте и пройдите один шаг генерации в деморежиме.{% endif %}</p>
+  <form class="trace-form" action="/project/map/tokenize" method="post">
+    <label for="trace-input">{% if en %}Your prompt{% else %}Ваш запрос{% endif %}</label>
+    <textarea id="trace-input" name="prompt" rows="2" maxlength="400" required>{% if en %}What is a token{% else %}Что такое токен{% endif %}</textarea>
+    <button class="brain-control brain-doc" type="submit"><span class="brain-mark" aria-hidden="true"></span>{% if en %}Tokenize{% else %}Разбить на токены{% endif %}</button>
+  </form>
+  <p class="trace-status" role="status" data-loading="{% if en %}Tokenizing…{% else %}Разбиваем текст…{% endif %}" data-error="{% if en %}The tokenizer is unavailable. Try again in a moment.{% else %}Токенизатор недоступен. Попробуйте ещё раз через несколько секунд.{% endif %}" data-empty="{% if en %}Enter some text first.{% else %}Введите текст запроса.{% endif %}"></p>
+  <div class="trace-result" hidden>
+    <ol class="trace-steps">
+      <li><button class="brain-control trace-step" type="button" data-trace-stage="tokenizer"><span aria-hidden="true">01</span>{% if en %}Tokens{% else %}Токены{% endif %}</button></li>
+      <li><button class="brain-control trace-step" type="button" data-trace-stage="model"><span aria-hidden="true">02</span>{% if en %}Model{% else %}Модель{% endif %}</button></li>
+      <li><button class="brain-control trace-step" type="button" data-trace-stage="runtime" disabled><span aria-hidden="true">03</span>{% if en %}Runtime{% else %}Рантайм{% endif %}</button></li>
+    </ol>
+    <div class="trace-panel" data-trace-panel="tokenizer">
+      <h3 tabindex="-1">{% if en %}Text becomes token IDs{% else %}Текст превращается в ID токенов{% endif %}</h3>
+      <p>{% if en %}The first token marks the beginning of the sequence. The tiles show text fragments and their vocabulary IDs. Spaces appear as ␣. A character split across tokens may appear as bytes.{% else %}Первый токен отмечает начало последовательности. На плитках видны фрагменты текста и их ID в словаре. Пробелы обозначены знаком ␣. Если символ разбит между токенами, видны его байты.{% endif %}</p>
+      <ul class="trace-tokens" data-trace-tokens></ul>
+      <button class="brain-control" type="button" data-trace-stage="model">{% if en %}Send IDs to the model{% else %}Передать ID модели{% endif %}<span class="brain-arrow" aria-hidden="true">→</span></button>
+    </div>
+    <div class="trace-panel" data-trace-panel="model" hidden>
+      <h3 tabindex="-1">{% if en %}The model evaluates the next token{% else %}Модель оценивает следующий токен{% endif %}</h3>
+      <p>{% if en %}The decoder reads the preceding IDs and scores the vocabulary. In this demo, choose a token yourself from these three examples.{% else %}Декодер читает предыдущие ID и вычисляет оценки для словаря. В деморежиме выберите токен самостоятельно из трёх примеров.{% endif %}</p>
+      <code class="trace-context" data-trace-context></code>
+      <div class="trace-choices" data-trace-choices></div>
+    </div>
+    <div class="trace-panel" data-trace-panel="runtime" hidden>
+      <h3 tabindex="-1">{% if en %}The runtime decodes the continuation{% else %}Рантайм декодирует продолжение{% endif %}</h3>
+      <p>{% if en %}The selected ID is appended to the sequence. The tokenizer turns the result back into text.{% else %}Выбранный ID добавляется в конец последовательности. Токенизатор переводит результат обратно в текст.{% endif %}</p>
+      <p>{% if en %}Added token{% else %}Добавленный токен{% endif %} <code data-trace-added-id></code></p>
+      <p class="trace-output"><span data-trace-decoded></span><mark data-trace-added></mark></p>
+      <button class="brain-control" type="button" data-trace-stage="model"><span class="brain-arrow" aria-hidden="true">←</span>{% if en %}Choose another token{% else %}Выбрать другой токен{% endif %}</button>
+    </div>
+  </div>
+</section>

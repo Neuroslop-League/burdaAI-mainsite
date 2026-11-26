@@ -104,6 +104,8 @@ impl GitHub {
                 state: pull.status(),
                 url: web_url(repo, &["pull", &pull.number.to_string()]),
                 number: pull.number,
+                author: pull.user.and_then(|user| user.login),
+                date: parse_date(&pull.created_at).map(|date| date.format("%Y-%m-%d").to_string()),
                 name: pull.head.name,
                 title: pull.title,
             }));
@@ -261,6 +263,8 @@ pub struct TreeBranch {
     pub number: u64,
     pub name: String,
     pub title: String,
+    pub author: Option<String>,
+    pub date: Option<String>,
     pub state: &'static str,
     pub url: String,
 }
@@ -281,6 +285,7 @@ struct GitCommit {
 #[derive(Deserialize)]
 struct GitAuthor {
     id: i64,
+    login: Option<String>,
 }
 
 #[derive(Deserialize)]

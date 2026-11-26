@@ -1,36 +1,52 @@
 <section class="site-panel" data-pixel="heading" aria-labelledby="page-title">
-  <h1 id="page-title">{% if en %}The project{% else %}Проект{% endif %}</h1>
+  <h1 id="page-title">{% if en %}PR tree{% else %}Дерево PR{% endif %}</h1>
   <nav class="subnav" aria-label="{% if en %}Project views{% else %}Представления проекта{% endif %}">
     <a href="/project/map">{% if en %}Component map{% else %}Карта компонентов{% endif %}</a>
     <a href="/project/tree" aria-current="page">{% if en %}PR tree{% else %}Дерево PR{% endif %}</a>
   </nav>
-    {% if let Some(tree) = snapshot.value %}
-      <small>{% if snapshot.stale %}{% if en %}GitHub unavailable. Last successful update{% else %}GitHub недоступен. Последнее успешное обновление{% endif %}{% else %}{% if en %}Updated{% else %}Обновлено{% endif %}{% endif %} · {{ snapshot.updated }}</small>
+
+  {% if let Some(tree) = snapshot.value %}
+  <small>{% if snapshot.stale %}{% if en %}GitHub unavailable. Last successful update{% else %}GitHub недоступен. Последнее успешное обновление{% endif %}{% else %}{% if en %}Updated{% else %}Обновлено{% endif %}{% endif %} · {{ snapshot.updated }}</small>
+    <div class="pr-tree-layout">
       <figure class="pr-tree" aria-labelledby="pr-tree-title">
         <figcaption id="pr-tree-title">
           <a class="pr-trunk" href="{{ tree.url }}" data-pixel="about">{{ tree.branch }}</a>
         </figcaption>
         {% if tree.branches.is_empty() %}
-          <p>{% if en %}There are no pull requests targeting this branch yet.{% else %}В эту ветку пока нет pull request’ов.{% endif %}</p>
+        <p>{% if en %}There are no pull requests targeting this branch yet.{% else %}В эту ветку пока нет pull request’ов.{% endif %}</p>
         {% else %}
-          <ol class="pr-branches">
-            {% for branch in tree.branches %}
-            <li class="pr-branch" data-state="{{ branch.state }}">
-              <span class="pr-connector" aria-hidden="true"></span>
-              <a class="pr-card" href="{{ branch.url }}" data-pixel="heading">
-                <span class="pr-meta">
-                  <span>#{{ branch.number }}</span>
-                  <span class="pr-status">{% match branch.state %}{% when "merged" %}{% if en %}Merged{% else %}Влито{% endif %}{% when "open" %}{% if en %}Open{% else %}Открыт{% endif %}{% when "draft" %}{% if en %}Draft{% else %}Черновик{% endif %}{% when _ %}{% if en %}Closed{% else %}Закрыт{% endif %}{% endmatch %}</span>
-                </span>
+        <ol class="pr-branches">
+          {% for branch in tree.branches %}
+          <li class="pr-branch" data-state="{{ branch.state }}">
+            <span class="pr-connector" aria-hidden="true"><i></i></span>
+            <details class="pr-entry" name="pr-tree-entry"{% if loop.first %} open{% endif %}>
+              <summary class="pr-node">
+                <span class="pr-node-number">#{{ branch.number }}</span>
                 <code>{{ branch.name }}</code>
-                <span class="pr-title">{{ branch.title }}</span>
-              </a>
-            </li>
-            {% endfor %}
-          </ol>
+                <span class="pr-node-indicator" aria-hidden="true"></span>
+              </summary>
+              <div class="pr-details">
+                <span class="pr-status" data-state="{{ branch.state }}">{% match branch.state %}{% when "merged" %}{% if en %}Merged{% else %}Влито{% endif %}{% when "open" %}{% if en %}Open{% else %}Открыт{% endif %}{% when "draft" %}{% if en %}Draft{% else %}Черновик{% endif %}{% when _ %}{% if en %}Closed{% else %}Закрыт{% endif %}{% endmatch %}</span>
+                <h2>{{ branch.title }}</h2>
+                <code>{{ branch.name }} → {{ tree.branch }}</code>
+                <p class="pr-byline">{% if let Some(author) = branch.author %}{{ author }}{% endif %}{% if let Some(date) = branch.date %}{% if branch.author.is_some() %} · {% endif %}<time datetime="{{ date }}">{{ date }}</time>{% endif %}</p>
+                <a class="action" href="{{ branch.url }}">PR #{{ branch.number }} · GitHub ↗</a>
+              </div>
+            </details>
+          </li>
+          {% endfor %}
+        </ol>
         {% endif %}
       </figure>
-    {% else %}
-      <p>{% if en %}The PR tree is temporarily unavailable.{% else %}Дерево PR временно недоступно.{% endif %}</p>
-    {% endif %}
+      {% if !tree.branches.is_empty() %}
+      <aside class="pr-inspector" aria-live="polite" hidden>
+        <p class="pr-inspector-hint">{% if en %}Select a branch to inspect its pull request.{% else %}Выберите ветку, чтобы посмотреть её PR.{% endif %}</p>
+        <div class="pr-inspector-content"></div>
+      </aside>
+      <script src="/static/project-tree.js" defer></script>
+      {% endif %}
+    </div>
+  {% else %}
+    <p>{% if en %}The PR tree is temporarily unavailable.{% else %}Дерево PR временно недоступно.{% endif %}</p>
+  {% endif %}
 </section>

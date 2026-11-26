@@ -4,7 +4,7 @@
     <a class="brain-control brain-tab" href="/project/map" aria-current="page"><span class="brain-mark" aria-hidden="true"></span>{% if en %}Component map{% else %}Карта компонентов{% endif %}</a>
     <a class="brain-control brain-tab brain-pr" href="/project/tree"><span class="brain-mark" aria-hidden="true"></span>{% if en %}PR tree{% else %}Дерево PR{% endif %}</a>
   </nav>
-  <p class="map-instruction">{% if en %}Select a component to see its inputs, outputs and related work.{% else %}Выберите компонент, чтобы увидеть его связи, документацию и связанные PR.{% endif %}</p>
+  <p class="map-instruction">{% if en %}Select a component to see its connections and documentation.{% else %}Выберите компонент, чтобы увидеть его связи и документацию.{% endif %}</p>
 
   <div class="project-map" data-map-active="{{ active }}">
     <div class="map-stage">
@@ -53,9 +53,6 @@
           {% endif %}
         </dl>
         <a class="brain-control brain-doc" data-pixel="controls" href="https://github.com/Neuroslop-League/burdaAI/blob/main/docs/{{ component.document }}"><span class="brain-mark" aria-hidden="true"></span><span>{% if en %}Documentation{% else %}Документация{% endif %}</span><span class="brain-arrow" aria-hidden="true">↗</span></a>
-        <div class="map-pulls" aria-label="{% if en %}Related pull requests{% else %}Связанные pull request’ы{% endif %}">
-          {% for number in component.pulls %}<a class="brain-control brain-pr" href="https://github.com/Neuroslop-League/burdaAI/pull/{{ number }}"><span class="brain-mark" aria-hidden="true"></span><span>PR #{{ number }}</span><span class="brain-arrow" aria-hidden="true">↗</span></a>{% endfor %}
-        </div>
         <a class="brain-control brain-jump map-back" href="#component-nodes"><span>{% if en %}Back to the map{% else %}К карте{% endif %}</span><span class="brain-arrow" aria-hidden="true">↑</span></a>
       </section>
       {% endfor %}

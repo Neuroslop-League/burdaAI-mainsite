@@ -171,7 +171,7 @@ for (const scene of artwork.values()) {
   enterView.observe(scene.canvas);
 }
 for (const element of document.querySelectorAll(
-  '.card, .about, .site-panel, .item-list > li, .pr-card'
+  '.card, .about, .site-panel, .item-list > li'
 )) enterView.observe(element);
 
 function drawTexture(state) {
@@ -337,7 +337,7 @@ function clearPointer() {
 document.documentElement.addEventListener('pointerleave', clearPointer);
 addEventListener('scroll', clearPointer, { passive: true });
 
-const burstTargets = 'button:not(:disabled), .cta, .action, .language, .subnav a, .pr-trunk, .brain-control';
+const burstTargets = 'button:not(:disabled), .cta, .action, .language, .subnav a, .pr-trunk, .pr-node, .brain-control';
 const burstDirections = [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]];
 document.addEventListener('click', event => {
   if (!playing) return;

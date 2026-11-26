@@ -10,7 +10,6 @@ struct Definition {
     tone: &'static str,
     description: Text,
     document: &'static str,
-    pulls: &'static [u64],
 }
 
 const COMPONENTS: [Definition; 5] = [
@@ -24,7 +23,6 @@ const COMPONENTS: [Definition; 5] = [
             "Converts text to token IDs and back. Data preparation, training and local inference use the same tokenizer artifact.",
         ),
         document: "tokenizer.md",
-        pulls: &[5, 6, 16],
     },
     Definition {
         id: "data",
@@ -36,7 +34,6 @@ const COMPONENTS: [Definition; 5] = [
             "Corpus preparation validates records, splits them into training and evaluation sets, and produces tokenized shards with a manifest.",
         ),
         document: "data.md",
-        pulls: &[10, 11, 12],
     },
     Definition {
         id: "model",
@@ -48,7 +45,6 @@ const COMPONENTS: [Definition; 5] = [
             "The Transformer decoder predicts the next token from preceding context. It uses 20 layers, grouped-query attention and a 4,096-token context window.",
         ),
         document: "model-spec.md",
-        pulls: &[7, 8, 9],
     },
     Definition {
         id: "training",
@@ -60,7 +56,6 @@ const COMPONENTS: [Definition; 5] = [
             "PyTorch updates the decoder weights using the prepared data. Checkpoints save the weights and the state needed to resume training.",
         ),
         document: "training.md",
-        pulls: &[13, 15],
     },
     Definition {
         id: "runtime",
@@ -72,7 +67,6 @@ const COMPONENTS: [Definition; 5] = [
             "Loads the exported weights and tokenizer and generates text locally. It provides a Rust CLI and a local API.",
         ),
         document: "inference-bundle.md",
-        pulls: &[15, 17, 18, 20],
     },
 ];
 
@@ -124,7 +118,6 @@ pub struct Component {
     pub tone: &'static str,
     pub description: &'static str,
     pub document: &'static str,
-    pub pulls: &'static [u64],
     pub incoming: Vec<ComponentLink>,
     pub outgoing: Vec<ComponentLink>,
 }
@@ -176,7 +169,6 @@ impl Map {
                     tone: node.tone,
                     description: title(node.description),
                     document: node.document,
-                    pulls: node.pulls,
                     incoming,
                     outgoing,
                 }

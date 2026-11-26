@@ -485,7 +485,8 @@ async fn public_pages_and_github_integration() {
         .await;
     assert!(map.contains("Rust runtime"));
     assert!(map.contains("data-map-active=\"runtime\""));
-    assert!(map.contains("/pull/20") && map.contains("/docs/inference-bundle.md"));
+    assert!(!map.contains("github.com/Neuroslop-League/burdaAI/pull/"));
+    assert!(map.contains("/docs/inference-bundle.md"));
     assert!(
         fixture
             .get("/static/site.js", StatusCode::OK)

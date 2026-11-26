@@ -726,51 +726,19 @@ body:has(.home-page) :is(header, footer) { background: light-dark(#f4eafb, #1d19
 .scene-corner:nth-of-type(3) { bottom: 13px; left: 13px; border-width: 0 0 3px 3px; }
 .scene-corner:nth-of-type(4) { bottom: 13px; right: 13px; border-width: 0 3px 3px 0; }
 
-.home-flow {
-  margin: 25px 0 0;
-  padding: clamp(12px, 1.8vw, 24px);
-  border: 2px solid var(--home-edge);
-  background: var(--home-surface);
-  box-shadow: 4px 4px var(--violet);
-}
-.home-flow h2 { margin-bottom: 12px; color: var(--home-text); }
-.home-flow-stages {
-  --wire-gap: clamp(20px, 3vw, 46px);
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--wire-gap);
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.home-flow-stages li { position: relative; min-width: 0; }
-.home-flow-stages li:not(:last-child)::after {
-  content: "";
-  position: absolute;
-  top: calc(50% - 2px);
-  left: calc(100% + 3px);
-  width: calc(var(--wire-gap) - 4px);
-  height: 4px;
-  background: repeating-linear-gradient(90deg, var(--route-signal) 0 5px, transparent 5px 8px);
-  pointer-events: none;
-}
-.home-page :is([data-stage="model"], [data-topic="model"]) {
+.home-page [data-topic="model"] {
   --route-signal: light-dark(#6d40a3, #bd9aff);
   --route-fill: light-dark(#eee3fa, #352645);
-}
-.home-page [data-stage="tokenizer"] {
-  --route-signal: light-dark(#286c52, #83e9b3);
-  --route-fill: light-dark(#e1f2e7, #223a31);
 }
 .home-page [data-topic="training"] {
   --route-signal: light-dark(#426020, #d7fa6a);
   --route-fill: light-dark(#edf3d4, #303d23);
 }
-.home-page :is([data-stage="runtime"], [data-topic="runtime"]) {
+.home-page [data-topic="runtime"] {
   --route-signal: light-dark(#94511a, #ffb875);
   --route-fill: light-dark(#ffead7, #402d24);
 }
-.home-page :is(.home-flow-node, .home-card-link) {
+.home-page .home-card-link {
   --brain-signal: var(--route-signal);
   --brain-fill: var(--route-fill);
   --brain-ink: var(--home-text);
@@ -778,14 +746,8 @@ body:has(.home-page) :is(header, footer) { background: light-dark(#f4eafb, #1d19
   --brain-arrow-y: 0;
   color: var(--home-text);
 }
-.home-page :is(.home-flow-node, .home-card-link):is(:hover, :focus-visible) {
+.home-page .home-card-link:is(:hover, :focus-visible) {
   background: color-mix(in srgb, var(--route-fill) 82%, var(--route-signal));
-}
-.home-page .home-flow-node {
-  display: grid;
-  grid-template-columns: 7px 1fr 18px;
-  width: 100%;
-  min-height: clamp(44px, 3.8vw, 66px);
 }
 .home-specs {
   display: grid;
@@ -825,22 +787,10 @@ body:has(.home-page) :is(header, footer) { background: light-dark(#f4eafb, #1d19
   .home-hero-actions .cta { min-height: 44px; padding: 7px 9px; }
   .home-scene { min-height: 0; aspect-ratio: 1.95; }
   .home-scene :is(img, canvas) { inset-inline: auto 0; width: 118%; }
-  .home-flow { margin-top: 18px; }
   .home-specs { margin-top: 20px; }
   .home-specs dt { font-size: 11px; }
   .home-page .project { padding-block: 30px; }
 }
-@media (max-width: 480px) {
-  .home-flow-stages { --wire-gap: 13px; grid-template-columns: minmax(0, 1fr); }
-  .home-flow-stages li:not(:last-child)::after {
-    top: calc(100% + 3px);
-    left: 14px;
-    width: 4px;
-    height: calc(var(--wire-gap) - 3px);
-    background: repeating-linear-gradient(var(--route-signal) 0 4px, transparent 4px 6px);
-  }
-}
-
 @media (prefers-reduced-motion: no-preference) {
   .home-hero .league::before { animation: home-beacon 2.7s steps(1, end) infinite; }
   .home-hero h1 { animation: title-reveal 620ms steps(8, end) both; }
@@ -850,7 +800,6 @@ body:has(.home-page) :is(header, footer) { background: light-dark(#f4eafb, #1d19
   .home-hero-actions { animation: pixel-rise 380ms 360ms steps(5, end) both; }
   .home-primary:is(:hover, :focus-visible) .home-map-icon { animation: home-map-pulse 440ms steps(4, end); }
   .home-secondary:is(:hover, :focus-visible) .home-tree-icon { animation: home-tree-split 400ms steps(4, end); }
-  .home-flow-stages li:not(:last-child):is(:hover, :focus-within)::after { animation: home-wire-signal 430ms steps(4, end); }
   .home-scene img { animation: home-scene-entry 650ms steps(9, end) both; }
   .scene-corner { animation: home-beacon 4s steps(1, end) infinite; }
   .scene-corner:nth-of-type(2n) { animation-delay: -2s; }
@@ -897,10 +846,6 @@ body:has(.home-page) :is(header, footer) { background: light-dark(#f4eafb, #1d19
 @keyframes home-tree-split {
   50% { translate: 3px -3px; box-shadow: -3px 3px var(--orange); }
 }
-@keyframes home-wire-signal {
-  50% { opacity: .35; }
-}
-
 :where(button, .cta, .action, .language, .subnav a, .main-nav a, .foot a, .home-about-links a, .pr-trunk) {
   --motion-accent: var(--violet);
   position: relative;

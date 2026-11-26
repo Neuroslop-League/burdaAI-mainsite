@@ -480,9 +480,9 @@ async fn public_pages_and_github_integration() {
     let en = fixture.get("/?lang=en", StatusCode::OK).await;
     assert!(ru.contains("Я бурда и ты бурда, получается хуйня."));
     assert!(en.contains("burda together, burmalda forever."));
-    assert!(ru.contains("Путь запроса") && en.contains("How a prompt flows"));
+    assert!(!ru.contains("Путь запроса") && !en.contains("How a prompt flows"));
     assert!(!ru.contains("data-filter="));
-    for node in ["tokenizer", "model", "training", "runtime"] {
+    for node in ["model", "training", "runtime"] {
         assert!(en.contains(&format!("/project/map?node={node}&amp;lang=en")));
     }
     let map = fixture

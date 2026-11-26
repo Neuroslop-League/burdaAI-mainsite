@@ -17,20 +17,6 @@
         <i class="scene-corner"></i><i class="scene-corner"></i><i class="scene-corner"></i><i class="scene-corner"></i>
       </figure>
     </section>
-    <section class="home-flow" data-pixel="navigation" aria-labelledby="home-flow-title">
-      <h2 id="home-flow-title">{% if en %}How a prompt flows{% else %}Путь запроса{% endif %}</h2>
-      <ol class="home-flow-stages">
-        {% for stage in stages %}
-        <li data-stage="{{ stage.id }}">
-          <a class="brain-control home-flow-node" href="/project/map?node={{ stage.id }}{% if en %}&amp;lang=en{% endif %}">
-            <span class="brain-mark" aria-hidden="true"></span>
-            <span>{{ stage.title }}</span>
-            <span class="brain-arrow" aria-hidden="true">→</span>
-          </a>
-        </li>
-        {% endfor %}
-      </ol>
-    </section>
     <dl class="home-specs" aria-label="{% if en %}Model specifications{% else %}Характеристики модели{% endif %}">
       <div data-pixel="model"><dt>{% if en %}Transformer layers{% else %}Слоёв Transformer{% endif %}</dt><dd>20</dd></div>
       <div data-pixel="training"><dt>{% if en %}Context tokens{% else %}Токенов контекста{% endif %}</dt><dd>4096</dd></div>

@@ -171,7 +171,7 @@ for (const scene of artwork.values()) {
   enterView.observe(scene.canvas);
 }
 for (const element of document.querySelectorAll(
-  '.card, .about, .site-panel, .item-list > li'
+  '.card, .about, .site-panel, .item-list > li, .pr-branch'
 )) enterView.observe(element);
 
 function drawTexture(state) {

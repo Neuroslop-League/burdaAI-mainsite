@@ -531,12 +531,82 @@ body.has-pixel-field { background-image: none; }
   .pr-entry { grid-column: 2; }
 }
 @media (prefers-reduced-motion: no-preference) {
+  .pr-tree { animation: pr-stage-in 420ms steps(7, end) both; }
+  .pr-trunk { animation: panel-assemble 320ms 100ms steps(5, end) both; }
+  .pr-branches::before {
+    transform-origin: top;
+    animation: pr-trunk-grow 740ms 100ms steps(12, end) both, pr-bark-scroll 4.5s steps(12, end) infinite;
+  }
+  .pr-branches::after { animation: pr-stage-in 240ms 700ms steps(4, end) both; }
+
+  .pr-branch.pixel-entered .pr-connector::before {
+    transform-origin: left;
+    animation: pr-limb-grow 310ms steps(7, end) both;
+  }
+  .pr-branch.pixel-entered[data-state="merged"] .pr-connector::after {
+    transform-origin: left;
+    animation: pr-limb-grow 250ms 110ms steps(5, end) both;
+  }
+  .pr-branch.pixel-entered .pr-entry { animation: panel-assemble 300ms 130ms steps(5, end) both; }
+  .pr-branch:nth-child(even).pixel-entered .pr-entry { animation-delay: 210ms; }
+
   .pr-node { transition: translate 140ms steps(3, end), box-shadow 180ms steps(4, end); }
   .pr-node:is(:hover, :focus-visible) { translate: 0 -2px; box-shadow: 4px 5px var(--branch-color); }
   .pr-node:active { translate: 2px 2px; box-shadow: none; }
-  .pr-branch:has(.pr-node:is(:hover, :focus-visible), .pr-entry[open]) .pr-connector { animation: branch-signal 720ms steps(4, end); }
+  .pr-node::after {
+    content: "";
+    position: absolute;
+    inset: auto 2px 2px;
+    height: 2px;
+    background: repeating-linear-gradient(90deg, var(--branch-color) 0 5px, transparent 5px 8px);
+    scale: 0 1;
+    transform-origin: left;
+    pointer-events: none;
+  }
+  .pr-node:is(:hover, :focus-visible)::after, .pr-entry[open] > .pr-node::after {
+    animation: pr-limb-grow 340ms steps(7, end) both;
+  }
+  .pr-branch:has(.pr-node:is(:hover, :focus-visible), .pr-entry[open]) .pr-connector i {
+    animation: pr-signal 540ms steps(9, end);
+  }
   .pr-branch[data-state="open"] .pr-node-indicator { animation: brain-pulse 2.4s steps(1, end) infinite; }
-  .pr-entry[open] .pr-details, .pr-inspector .pr-details { animation: panel-assemble 260ms steps(5, end) both; }
+
+  .pr-inspector { animation: pr-stage-in 340ms 120ms steps(6, end) both; }
+  .pr-entry[open] .pr-details, .pr-inspector .pr-details {
+    animation: pr-details-reveal 360ms steps(7, end) both;
+  }
+  .pr-details .pr-status, .pr-details h2, .pr-details .action {
+    animation: panel-assemble 230ms steps(5, end) both;
+  }
+  .pr-details h2 { animation-delay: 60ms; }
+  .pr-details .action { animation-delay: 130ms; }
+  .pr-details:focus-within { animation-fill-mode: none; }
+}
+@keyframes pr-stage-in {
+  from { opacity: .5; clip-path: inset(0 0 12% 0); }
+  to { opacity: 1; clip-path: inset(0); }
+}
+@keyframes pr-trunk-grow {
+  from { scale: 1 0; }
+  to { scale: 1 1; }
+}
+@keyframes pr-bark-scroll {
+  to { background-position: 0 0, 0 54px; }
+}
+@keyframes pr-limb-grow {
+  from { scale: 0 1; }
+  to { scale: 1 1; }
+}
+@keyframes pr-signal {
+  0% { opacity: .5; }
+  32% { translate: calc(var(--arm) * .34) 5px; }
+  66% { translate: calc(var(--arm) * .66) 9px; }
+  92% { translate: calc(var(--arm) - 6px) 9px; opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes pr-details-reveal {
+  from { opacity: .52; clip-path: inset(0 0 100% 0); translate: 0 6px; }
+  to { opacity: 1; clip-path: inset(0); translate: 0 0; }
 }
 @media (max-width: 900px) {
   .main-nav { gap: 8px; }

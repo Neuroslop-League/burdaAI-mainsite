@@ -107,7 +107,16 @@ impl Fixture {
     }
 
     async fn sign_in(&self, handled_as: &str, status: StatusCode) -> String {
-        let start = self.request("/auth/github", "", None).await;
+        self.sign_in_from(handled_as, status, false).await
+    }
+
+    async fn sign_in_from(&self, handled_as: &str, status: StatusCode, account: bool) -> String {
+        let path = if account {
+            "/auth/github?next=account"
+        } else {
+            "/auth/github"
+        };
+        let start = self.request(path, "", None).await;
         assert_eq!(start.status(), StatusCode::SEE_OTHER);
         let flow = received_cookie(&start, "burda_oauth");
         let redirect = Url::parse(start.headers()[header::LOCATION].to_str().unwrap()).unwrap();
@@ -131,6 +140,10 @@ impl Fixture {
         let replay = self.request(&callback, &flow, None).await;
         assert_eq!(replay.status(), StatusCode::BAD_REQUEST);
         if status == StatusCode::SEE_OTHER {
+            assert_eq!(
+                response.headers()[header::LOCATION],
+                if account { "/account" } else { "/studio" },
+            );
             received_cookie(&response, "burda_session")
         } else {
             String::new()
@@ -138,7 +151,7 @@ impl Fixture {
     }
 
     async fn csrf(&self, session: &str) -> String {
-        let html = rendered(self.request("/studio", session, None).await).await;
+        let html = rendered(self.request("/account", session, None).await).await;
         html.split_once("name=\"csrf\" value=\"")
             .unwrap()
             .1
@@ -545,5 +558,159 @@ async fn public_pages_and_github_integration() {
             .get("/project/tree?lang=en", StatusCode::OK)
             .await
             .contains("feature/architecture")
+    );
+}
+
+#[tokio::test]
+async fn account_bookmarks_profile_and_session_boundaries() {
+    let fixture = Fixture::new().await;
+    let guest = fixture.get("/account?lang=en", StatusCode::OK).await;
+    assert!(guest.contains("My account") && guest.contains("/auth/github?next=account"));
+    assert_eq!(
+        fixture
+            .request("/auth/github?next=https%3A%2F%2Fexample.com", "", None)
+            .await
+            .status(),
+        StatusCode::BAD_REQUEST,
+    );
+
+    let reader = fixture
+        .sign_in_from("999", StatusCode::SEE_OTHER, true)
+        .await;
+    let other_device = fixture
+        .sign_in_from("999", StatusCode::SEE_OTHER, true)
+        .await;
+    let founder = fixture.sign_in(FOUNDER, StatusCode::SEE_OTHER).await;
+    let csrf = fixture.csrf(&reader).await;
+
+    let reader_page = fixture.request("/account?lang=en", &reader, None).await;
+    assert_eq!(reader_page.headers()[header::CACHE_CONTROL], "no-store");
+    let html = rendered(reader_page).await;
+    assert!(html.contains("Outsider") && html.contains("Reader"));
+    assert!(!html.contains("Open studio"));
+    assert_eq!(
+        fixture.request("/studio/new", &reader, None).await.status(),
+        StatusCode::FORBIDDEN,
+    );
+
+    let profile = [
+        ("csrf", csrf.as_str()),
+        ("display_name", "  Pixel Reader  "),
+    ];
+    let bad_profile = [("csrf", "wrong"), ("display_name", "Spoof")];
+    for (form, status) in [
+        (&bad_profile, StatusCode::FORBIDDEN),
+        (&profile, StatusCode::SEE_OTHER),
+    ] {
+        assert_eq!(
+            fixture
+                .request("/account/profile", &reader, Some(form))
+                .await
+                .status(),
+            status
+        );
+    }
+    let html = rendered(
+        fixture
+            .request("/account?saved=true&lang=en", &other_device, None)
+            .await,
+    )
+    .await;
+    assert!(html.contains("Pixel Reader") && html.contains("Profile saved."));
+
+    sqlx::query(
+        "INSERT INTO articles (author_id, title, body, language, published_at) VALUES
+         (?, 'Public article', '', 'en', '2026-01-01'),
+         (?, 'Private draft', '', 'en', NULL)",
+    )
+    .bind(FOUNDER)
+    .bind(FOUNDER)
+    .execute(&fixture.state.db)
+    .await
+    .unwrap();
+    let save = [
+        ("csrf", csrf.as_str()),
+        ("intent", "save"),
+        ("from_article", "true"),
+    ];
+    let bad_csrf = [("csrf", "wrong"), ("intent", "save")];
+    for (path, session, form, status) in [
+        ("/account/bookmarks/1", "", &save[..], StatusCode::FORBIDDEN),
+        (
+            "/account/bookmarks/1",
+            reader.as_str(),
+            &bad_csrf[..],
+            StatusCode::FORBIDDEN,
+        ),
+        (
+            "/account/bookmarks/2",
+            reader.as_str(),
+            &save[..],
+            StatusCode::NOT_FOUND,
+        ),
+        (
+            "/account/bookmarks/1",
+            reader.as_str(),
+            &save[..],
+            StatusCode::SEE_OTHER,
+        ),
+        (
+            "/account/bookmarks/1",
+            reader.as_str(),
+            &save[..],
+            StatusCode::SEE_OTHER,
+        ),
+    ] {
+        let response = fixture.request(path, session, Some(form)).await;
+        assert_eq!(response.status(), status);
+        if status == StatusCode::SEE_OTHER {
+            assert_eq!(
+                response.headers()[header::LOCATION],
+                "/articles/1#article-bookmark"
+            );
+        }
+    }
+
+    let article_page = fixture.request("/articles/1?lang=en", &reader, None).await;
+    assert_eq!(article_page.headers()[header::CACHE_CONTROL], "no-store");
+    assert!(
+        rendered(article_page)
+            .await
+            .contains("Remove from saved articles")
+    );
+    let saved = rendered(fixture.request("/account?lang=en", &reader, None).await).await;
+    assert_eq!(saved.matches("href=\"/articles/1\"").count(), 1);
+    assert!(!saved.contains("Private draft"));
+    let founder_page = rendered(fixture.request("/account?lang=en", &founder, None).await).await;
+    assert!(
+        founder_page.contains("Manage maintainers") && !founder_page.contains("Public article")
+    );
+
+    let remove = [("csrf", csrf.as_str()), ("intent", "remove")];
+    assert_eq!(
+        fixture
+            .request("/account/bookmarks/1", &reader, Some(&remove))
+            .await
+            .status(),
+        StatusCode::SEE_OTHER,
+    );
+    let account = rendered(fixture.request("/account", &reader, None).await).await;
+    assert!(!account.contains("Public article"));
+
+    let exit = [
+        ("csrf", csrf.as_str()),
+        ("all", "true"),
+        ("account", "true"),
+    ];
+    let response = fixture.request("/auth/logout", &reader, Some(&exit)).await;
+    assert_eq!(response.headers()[header::LOCATION], "/account");
+    for session in [&reader, &other_device] {
+        let page = rendered(fixture.request("/account?lang=en", session, None).await).await;
+        assert!(page.contains("Continue with GitHub") && !page.contains("Pixel Reader"));
+    }
+    assert!(
+        rendered(fixture.request("/account?lang=en", &founder, None).await)
+            .await
+            .contains("Manage maintainers")
     );
 }

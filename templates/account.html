@@ -1,0 +1,80 @@
+<section class="site-panel account-panel" data-pixel="heading" aria-labelledby="page-title">
+  <h1 id="page-title">{% if en %}My account{% else %}Личный кабинет{% endif %}</h1>
+  {% if let Some(user) = viewer %}
+  <div class="account-identity" data-pixel="navigation">
+    <img class="avatar account-avatar" src="{{ user.avatar_url }}" width="96" height="96" alt="">
+    <div>
+      <h2>{{ user.name() }}</h2>
+      <a href="https://github.com/{{ user.login }}">@{{ user.login }} <span aria-hidden="true">↗</span></a>
+      <p class="account-role">
+        {% if user.founder() %}{% if en %}Founder{% else %}Основатель{% endif %}
+        {% else if user.maintainer() %}{% if en %}Maintainer{% else %}Мейнтейнер{% endif %}
+        {% else %}{% if en %}Reader{% else %}Читатель{% endif %}{% endif %}
+      </p>
+    </div>
+  </div>
+  <div class="account-grid">
+    <section class="account-card account-library" id="account-bookmarks" aria-labelledby="bookmarks-title">
+      <h2 id="bookmarks-title">{% if en %}Saved articles{% else %}Сохранённые статьи{% endif %}</h2>
+      {% if bookmarks.is_empty() %}
+      <p>{% if en %}Save an article to find it here later.{% else %}Сохраните статью, чтобы вернуться к ней позже.{% endif %}</p>
+      <a class="brain-control" href="/articles">{% if en %}Browse articles{% else %}К статьям{% endif %}<span class="brain-arrow" aria-hidden="true">→</span></a>
+      {% else %}
+      <ul class="item-list">
+        {% for item in bookmarks %}
+        <li>
+          <div><a href="/articles/{{ item.id }}" lang="{{ item.language }}">{{ item.title }}</a><small>{{ item.author }} · {{ item.language|upper }}</small></div>
+          <form method="post" action="/account/bookmarks/{{ item.id }}">
+            <input type="hidden" name="csrf" value="{{ user.csrf }}">
+            <button class="brain-control" type="submit" name="intent" value="remove" aria-label="{% if en %}Remove from saved articles{% else %}Убрать из сохранённых{% endif %} · {{ item.title }}">{% if en %}Remove{% else %}Убрать{% endif %}</button>
+          </form>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </section>
+
+    <section class="account-card account-settings" id="account-profile" aria-labelledby="settings-title">
+      <h2 id="settings-title">{% if en %}Profile settings{% else %}Настройки профиля{% endif %}</h2>
+      <form method="post" action="/account/profile" class="account-form">
+        <input type="hidden" name="csrf" value="{{ user.csrf }}">
+        <label for="display-name">{% if en %}Display name{% else %}Отображаемое имя{% endif %}</label>
+        <input id="display-name" name="display_name" type="text" autocomplete="nickname" value="{{ user.display_name }}" maxlength="60" placeholder="{{ user.login }}" aria-describedby="display-name-hint">
+        <small id="display-name-hint">{% if en %}Leave blank to use your GitHub username.{% else %}Пустое поле вернёт имя пользователя GitHub.{% endif %}</small>
+        <button class="brain-control brain-doc" type="submit">{% if en %}Save profile{% else %}Сохранить профиль{% endif %}</button>
+        {% if saved %}<p class="account-saved" role="status">{% if en %}Profile saved.{% else %}Профиль сохранён.{% endif %}</p>{% endif %}
+      </form>
+    </section>
+
+    {% if user.maintainer() %}
+    <section class="account-card account-editor" aria-labelledby="editor-title">
+      <h2 id="editor-title">{% if en %}Editorial tools{% else %}Инструменты редакции{% endif %}</h2>
+      <div class="actions">
+        <a class="brain-control" href="/studio">{% if en %}Open studio{% else %}Открыть редактор{% endif %}<span class="brain-arrow" aria-hidden="true">→</span></a>
+        {% if user.founder() %}<a class="brain-control" href="/studio/maintainers">{% if en %}Manage maintainers{% else %}Управление мейнтейнерами{% endif %}<span class="brain-arrow" aria-hidden="true">→</span></a>{% endif %}
+      </div>
+    </section>
+    {% endif %}
+
+    <section class="account-card account-session" aria-labelledby="session-title">
+      <h2 id="session-title">{% if en %}Sign-in session{% else %}Сеанс входа{% endif %}</h2>
+      <form method="post" action="/auth/logout" class="actions">
+        <input type="hidden" name="csrf" value="{{ user.csrf }}">
+        <input type="hidden" name="account" value="true">
+        <button class="brain-control" type="submit">{% if en %}Sign out{% else %}Выйти{% endif %}</button>
+        <button class="brain-control" type="submit" name="all" value="true">{% if en %}Sign out everywhere{% else %}Выйти на всех устройствах{% endif %}</button>
+      </form>
+    </section>
+  </div>
+  {% else %}
+  <div class="account-card account-entry">
+    <h2>{% if en %}Sign in with GitHub{% else %}Вход через GitHub{% endif %}</h2>
+    <p>{% if en %}Save articles and set up your profile. Maintainers can open the editor here too.{% else %}Сохраняйте статьи и настройте профиль. Мейнтейнерам отсюда доступен редактор.{% endif %}</p>
+    {% if oauth_ready %}
+    <a class="brain-control brain-doc" href="/auth/github?next=account{% if en %}&amp;lang=en{% endif %}"><span class="brain-mark" aria-hidden="true"></span>{% if en %}Continue with GitHub{% else %}Войти через GitHub{% endif %}<span class="brain-arrow" aria-hidden="true">↗</span></a>
+    {% else %}
+    <p class="notice">{% if en %}GitHub sign-in is unavailable until OAuth is configured on this server.{% else %}Вход станет доступен после настройки GitHub OAuth на сервере.{% endif %}</p>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>

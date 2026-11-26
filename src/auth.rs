@@ -92,6 +92,8 @@ impl OAuth {
 pub struct Viewer {
     pub github_id: i64,
     pub login: String,
+    pub avatar_url: String,
+    pub display_name: String,
     pub role: String,
     pub csrf: String,
 }
@@ -99,6 +101,18 @@ pub struct Viewer {
 impl Viewer {
     pub fn founder(&self) -> bool {
         self.role == "founder"
+    }
+
+    pub fn maintainer(&self) -> bool {
+        matches!(self.role.as_str(), "founder" | "maintainer")
+    }
+
+    pub fn name(&self) -> &str {
+        if self.display_name.is_empty() {
+            &self.login
+        } else {
+            &self.display_name
+        }
     }
 
     pub fn check_csrf(&self, input: &str) -> Result<(), Failure> {
@@ -132,14 +146,20 @@ fn cookie(name: &'static str, value: String, age: i64, secure: bool) -> Cookie<'
         .build()
 }
 
+pub fn has_session(jar: &CookieJar) -> bool {
+    jar.get(SESSION).is_some()
+}
+
 pub async fn viewer(state: &AppState, jar: &CookieJar) -> Result<Option<Viewer>, Failure> {
     let Some(session) = jar.get(SESSION) else {
         return Ok(None);
     };
     sqlx::query_as(
-        "SELECT m.github_id, m.login, m.role, s.csrf FROM sessions s
-         JOIN maintainers m USING (github_id)
-         WHERE token_hash = ? AND expires_at > ? AND role != 'inactive'",
+        "SELECT a.github_id, a.login, a.avatar_url, a.display_name, s.csrf,
+                COALESCE(NULLIF(m.role, 'inactive'), 'reader') AS role
+         FROM sessions s JOIN accounts a USING (github_id)
+         LEFT JOIN maintainers m USING (github_id)
+         WHERE token_hash = ? AND expires_at > ?",
     )
     .bind(hash(session.value()))
     .bind(now())
@@ -148,7 +168,34 @@ pub async fn viewer(state: &AppState, jar: &CookieJar) -> Result<Option<Viewer>,
     .map_err(Into::into)
 }
 
-pub async fn start(State(state): State<AppState>, jar: CookieJar) -> Result<Response, Failure> {
+#[derive(Deserialize)]
+pub struct Start {
+    #[serde(default)]
+    next: Destination,
+}
+
+#[derive(Default, Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum Destination {
+    #[default]
+    Studio,
+    Account,
+}
+
+impl Destination {
+    fn key(&self) -> &'static str {
+        match self {
+            Self::Studio => "studio",
+            Self::Account => "account",
+        }
+    }
+}
+
+pub async fn start(
+    State(state): State<AppState>,
+    jar: CookieJar,
+    Query(start): Query<Start>,
+) -> Result<Response, Failure> {
     let oauth = state
         .oauth
         .as_ref()
@@ -159,10 +206,11 @@ pub async fn start(State(state): State<AppState>, jar: CookieJar) -> Result<Resp
         .bind(now())
         .execute(&state.db)
         .await?;
-    sqlx::query("INSERT INTO oauth_flows VALUES (?, ?, ?)")
+    sqlx::query("INSERT INTO oauth_flows (state_hash, verifier, expires_at, destination) VALUES (?, ?, ?, ?)")
         .bind(hash(&csrf_state))
         .bind(&verifier)
         .bind(now() + FLOW_MAX)
+        .bind(start.next.key())
         .execute(&state.db)
         .await?;
     let mut url = oauth.authorize_url.clone();
@@ -207,8 +255,8 @@ pub async fn callback(
     if !bool::from(flow.value().as_bytes().ct_eq(oauth_state.as_bytes())) {
         return Err(Failure::invalid_login());
     }
-    let verifier: String = sqlx::query_scalar(
-        "DELETE FROM oauth_flows WHERE state_hash = ? AND expires_at > ? RETURNING verifier",
+    let (verifier, destination): (String, String) = sqlx::query_as(
+        "DELETE FROM oauth_flows WHERE state_hash = ? AND expires_at > ? RETURNING verifier, destination",
     )
     .bind(hash(&oauth_state))
     .bind(now())
@@ -256,9 +304,18 @@ pub async fn callback(
     )
     .bind(&identity.login).bind(identity.avatar()).bind(identity.id)
     .execute(&mut *transaction).await?.rows_affected();
-    if active == 0 {
+    if active == 0 && destination == "studio" {
         return Err(Failure::forbidden());
     }
+    sqlx::query(
+        "INSERT INTO accounts (github_id, login, avatar_url) VALUES (?, ?, ?)
+         ON CONFLICT(github_id) DO UPDATE SET login = excluded.login, avatar_url = excluded.avatar_url",
+    )
+    .bind(identity.id)
+    .bind(&identity.login)
+    .bind(identity.avatar())
+    .execute(&mut *transaction)
+    .await?;
 
     sqlx::query("DELETE FROM sessions WHERE expires_at <= ?")
         .bind(now())
@@ -283,7 +340,11 @@ pub async fn callback(
     Ok((
         jar.remove(cookie(FLOW, String::new(), 0, oauth.secure()))
             .add(cookie(SESSION, token, SESSION_MAX, oauth.secure())),
-        Redirect::to("/studio"),
+        Redirect::to(if destination == "account" {
+            "/account"
+        } else {
+            "/studio"
+        }),
     )
         .into_response())
 }
@@ -291,6 +352,10 @@ pub async fn callback(
 #[derive(Deserialize)]
 pub struct Logout {
     csrf: String,
+    #[serde(default)]
+    all: bool,
+    #[serde(default)]
+    account: bool,
 }
 
 pub async fn logout(
@@ -301,17 +366,25 @@ pub async fn logout(
     let Some(session) = jar.get(SESSION) else {
         return Ok(StatusCode::NO_CONTENT.into_response());
     };
-    if let Some(viewer) = viewer(&state, &jar).await? {
+    let viewer = viewer(&state, &jar).await?;
+    if let Some(viewer) = &viewer {
         viewer.check_csrf(&input.csrf)?;
     }
-    sqlx::query("DELETE FROM sessions WHERE token_hash = ?")
-        .bind(hash(session.value()))
-        .execute(&state.db)
-        .await?;
+    if let Some(viewer) = viewer.filter(|_| input.all) {
+        sqlx::query("DELETE FROM sessions WHERE github_id = ?")
+            .bind(viewer.github_id)
+            .execute(&state.db)
+            .await?;
+    } else {
+        sqlx::query("DELETE FROM sessions WHERE token_hash = ?")
+            .bind(hash(session.value()))
+            .execute(&state.db)
+            .await?;
+    }
     let secure = state.oauth.as_ref().is_some_and(|oauth| oauth.secure());
     Ok((
         jar.remove(cookie(SESSION, String::new(), 0, secure)),
-        Redirect::to("/"),
+        Redirect::to(if input.account { "/account" } else { "/" }),
     )
         .into_response())
 }

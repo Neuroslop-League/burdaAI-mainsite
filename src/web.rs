@@ -21,6 +21,8 @@ use crate::{
     project_map::{ComponentLink, Map, Selection, component_links},
 };
 
+mod account;
+
 #[derive(Clone)]
 pub struct AppState {
     pub db: SqlitePool,
@@ -43,6 +45,9 @@ pub fn app(state: AppState) -> Router {
         .route("/", get(home))
         .route("/articles", get(article_list))
         .route("/articles/{id}", get(article))
+        .route("/account", get(account::show))
+        .route("/account/profile", post(account::profile))
+        .route("/account/bookmarks/{id}", post(account::bookmark))
         .route("/maintainers", get(maintainer_list))
         .route("/maintainers/{id}", get(profile))
         .route("/project", get(|| async { Redirect::to("/project/map") }))
@@ -107,8 +112,11 @@ async fn page_middleware(mut request: Request, next: Next) -> Response {
                 .is_some_and(|cookie| cookie.value() == "en"),
         )
     });
-    let private =
-        request.uri().path().starts_with("/studio") || request.uri().path().starts_with("/auth");
+    let path = request.uri().path();
+    let private = path.starts_with("/studio")
+        || path.starts_with("/auth")
+        || path.starts_with("/account")
+        || (path.starts_with("/articles/") && auth::has_session(&cookies));
     request.extensions_mut().insert(locale);
     let mut response = next.run(request).await;
     if let Some(failure) = response.extensions_mut().remove::<Failure>() {
@@ -240,8 +248,8 @@ impl Failure {
             StatusCode::BAD_REQUEST,
             "Вход не завершён",
             "Sign-in incomplete",
-            "Откройте редактор и запустите вход заново.",
-            "Open the studio and start sign-in again.",
+            "Откройте личный кабинет и запустите вход заново.",
+            "Open your account page and start sign-in again.",
         )
     }
 
@@ -361,25 +369,37 @@ async fn article_list(
 #[derive(Template)]
 #[template(path = "article.html")]
 struct ArticlePage<'a> {
+    en: bool,
     article: &'a Article,
     rendered: String,
+    viewer: Option<Viewer>,
+    bookmarked: bool,
 }
 
 async fn article(
     State(state): State<AppState>,
     locale: Locale,
     Path(id): Path<i64>,
+    jar: CookieJar,
 ) -> Result<Html<String>, Failure> {
     let article = db::article(&state.db, id)
         .await?
         .filter(|item| item.published)
         .ok_or_else(Failure::missing)?;
+    let viewer = auth::viewer(&state, &jar).await?;
+    let bookmarked = match &viewer {
+        Some(viewer) => account::is_bookmarked(&state, viewer.github_id, id).await?,
+        None => false,
+    };
     page(
         locale,
         &article.title,
         ArticlePage {
+            en: locale.0,
             rendered: markdown(&article.body),
             article: &article,
+            viewer,
+            bookmarked,
         },
     )
 }
@@ -574,7 +594,7 @@ async fn studio(
     jar: CookieJar,
 ) -> Result<Html<String>, Failure> {
     let viewer = auth::viewer(&state, &jar).await?;
-    let articles = match &viewer {
+    let articles = match viewer.as_ref().filter(|viewer| viewer.maintainer()) {
         Some(viewer) => db::articles(&state.db, Some(viewer.github_id), true).await?,
         None => Vec::new(),
     };
@@ -643,6 +663,7 @@ fn editor(
 async fn require_viewer(state: &AppState, jar: &CookieJar) -> Result<Viewer, Failure> {
     auth::viewer(state, jar)
         .await?
+        .filter(Viewer::maintainer)
         .ok_or_else(Failure::forbidden)
 }
 

@@ -1472,3 +1472,87 @@ body:has(.home-page) :is(header, footer) { background: light-dark(#f4eafb, #1d19
   99% { top: 0; left: 0; opacity: 1; }
   100% { opacity: 0; }
 }
+
+.account-panel {
+  --account-profile: light-dark(#7044a2, #c2a8f8);
+  --account-library: light-dark(#327051, #8ce1ac);
+  --account-session: light-dark(#91501a, #ffb977);
+}
+.account-identity, .account-card {
+  min-width: 0;
+  padding: clamp(14px, 2vw, 28px);
+  border: 2px solid var(--line);
+  background: var(--paper);
+}
+.account-identity {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(12px, 2vw, 24px);
+  box-shadow: 4px 4px var(--account-profile);
+}
+.account-identity .account-avatar {
+  width: clamp(54px, 9vw, 96px);
+  height: clamp(54px, 9vw, 96px);
+  object-fit: cover;
+  box-shadow: 3px 3px var(--account-profile);
+}
+.account-identity h2, .account-card h2 { margin: 0 0 10px; }
+.account-identity .account-role {
+  display: inline-block;
+  margin: 6px 0 0;
+  padding: 2px 8px;
+  border: 1px solid var(--account-profile);
+  background: light-dark(#eee3fb, #37294d);
+  font-size: var(--ui-size);
+}
+.account-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: clamp(12px, 1.6vw, 24px);
+  margin-top: clamp(16px, 2vw, 30px);
+}
+.account-card {
+  --section-signal: var(--account-profile);
+  border-top: 5px solid var(--section-signal);
+  box-shadow: 3px 3px var(--section-signal);
+}
+.account-library { --section-signal: var(--account-library); }
+.account-session { --section-signal: var(--account-session); }
+.account-entry { max-width: 60ch; }
+.account-entry .brain-control { margin-top: 6px; }
+.account-library .item-list > li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px 14px;
+}
+.account-library .item-list > li > div { min-width: 0; }
+.account-form { display: grid; justify-items: start; gap: 8px; }
+.account-form label { font-weight: 700; }
+.account-form input {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--control-height);
+  padding: 8px 10px;
+  border: 2px solid var(--line);
+  border-radius: 0;
+  color: var(--ink);
+  background: var(--field);
+  font: inherit;
+}
+.account-saved { color: var(--account-library); }
+.article-bookmark { margin-block: 14px; }
+.article-bookmark button[value="remove"] {
+  --brain-signal: light-dark(#2e6b4c, #8ce1ac);
+  --brain-fill: light-dark(#e0f2e7, #203b31);
+}
+@media (max-width: 680px) {
+  .account-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .account-panel.pixel-entered .account-card { animation: brain-panel 280ms steps(5, end) both; }
+  .account-panel.pixel-entered .account-card:nth-child(2n) { animation-delay: 70ms; }
+}

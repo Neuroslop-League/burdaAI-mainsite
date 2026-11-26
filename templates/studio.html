@@ -1,6 +1,7 @@
 <section class="site-panel" data-pixel="heading" aria-labelledby="page-title">
   <h1 id="page-title">{% if en %}Studio{% else %}Редактор{% endif %}</h1>
   {% if let Some(user) = viewer %}
+    {% if user.maintainer() %}
     <p>{{ user.login }}</p>
     <div class="actions">
       <a class="action primary" data-pixel="controls" href="/studio/new">{% if en %}New article{% else %}Новая статья{% endif %}</a>
@@ -19,6 +20,10 @@
       <li>{% if en %}You have no articles yet.{% else %}У вас пока нет статей.{% endif %}</li>
       {% endfor %}
     </ul>
+    {% else %}
+    <p>{% if en %}The editor is available to project maintainers.{% else %}Редактор доступен мейнтейнерам проекта.{% endif %}</p>
+    <a class="action" data-pixel="controls" href="/account">{% if en %}My account{% else %}Личный кабинет{% endif %}</a>
+    {% endif %}
   {% else %}
     <p>{% if en %}Maintainers sign in with GitHub to write and publish articles.{% else %}Мейнтейнеры входят через GitHub, чтобы писать и публиковать статьи.{% endif %}</p>
     {% if oauth_ready %}

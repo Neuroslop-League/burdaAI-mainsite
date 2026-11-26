@@ -12,7 +12,7 @@ Open [the local site](http://127.0.0.1:3000/). On first startup, the server crea
 
 Public pages do not require sign-in. The pull request tree and maintainer activity use the GitHub REST API. You can set `GITHUB_API_TOKEN` to a token with read access to the public repositories for a higher rate limit. Responses are cached in memory for 15 minutes. If a refresh fails, the site shows the latest successful response from the current server process.
 
-## GitHub sign-in and article editor
+## GitHub sign-in, personal accounts, and the article editor
 
 Create a local [GitHub OAuth App](https://github.com/settings/developers) with `http://127.0.0.1:3000/` as its homepage and `http://127.0.0.1:3000/auth/github/callback` as its callback URL. Set the client ID and client secret in a local `.env` file:
 
@@ -23,7 +23,7 @@ Create a local [GitHub OAuth App](https://github.com/settings/developers) with `
     # DATABASE_PATH=burdaai.db
     # BIND_ADDR=127.0.0.1:3000
 
-Restart the server and open [Studio](http://127.0.0.1:3000/studio). The founder, **RUdolf1517**, manages the maintainer roster. Maintainers can draft, preview, and publish their own Markdown articles. Saving a published article updates its public version immediately. Unpublishing returns it to drafts.
+Restart the server and open [My account](http://127.0.0.1:3000/account) from the footer. Anyone who signs in with GitHub can set a display name, save published articles, and sign out on all devices. Maintainers can open [Studio](http://127.0.0.1:3000/studio) to draft, preview, and publish their own Markdown articles. The founder, **RUdolf1517**, manages the maintainer roster. Saving a published article updates its public version immediately. Unpublishing returns it to drafts.
 
 ## Checks
 
